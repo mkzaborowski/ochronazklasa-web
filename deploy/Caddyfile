@@ -1,0 +1,16 @@
+# Replace panel.twojadomena.pl with your real (sub)domain.
+# Caddy obtains and renews a Let's Encrypt certificate automatically as long as
+# the domain's DNS A record points at this server and ports 80+443 are open.
+
+panel.twojadomena.pl {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+
+	# Reasonable security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}

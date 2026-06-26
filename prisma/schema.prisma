@@ -1,0 +1,355 @@
+// Ochrona z Klasa — data model
+// Google Drive stores the FILES; Postgres stores the searchable INDEX,
+// users, and the audit trail (required for RODO/GDPR accountability).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js (NextAuth v5) — staff accounts + sessions
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  AGENT
+  VIEWER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  // null for SSO-only accounts; set for email+password sign-in
+  passwordHash  String?
+  role          Role      @default(AGENT)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  policies  Policy[]   @relation("PolicyCreatedBy")
+  auditLogs AuditLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Domain — clients & policies
+// ---------------------------------------------------------------------------
+
+enum ClientType {
+  INDIVIDUAL
+  COMPANY
+}
+
+model Client {
+  id   String     @id @default(cuid())
+  type ClientType @default(INDIVIDUAL)
+
+  // Individual (osoba fizyczna)
+  firstName String?
+  lastName  String?
+  pesel     String? // SENSITIVE — see RODO notes in PROJECT.md
+
+  // Company (firma)
+  companyName String?
+  nip         String?
+  regon       String?
+
+  // Contact
+  email String?
+  phone String?
+
+  // Address
+  street     String?
+  city       String?
+  postalCode String?
+  country    String? @default("PL")
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  policies Policy[]
+
+  @@index([lastName])
+  @@index([nip])
+}
+
+enum Insurer {
+  HESTIA
+  INTERRISK
+}
+
+enum PolicyStatus {
+  DRAFT // being prepared, not yet issued
+  ISSUED // issued by the insurer, awaiting activation
+  ACTIVE // currently in force
+  EXPIRED // past end date
+  CANCELLED // terminated early
+  RENEWED // superseded by a renewal policy
+}
+
+model Policy {
+  id           String       @id @default(cuid())
+  policyNumber String?      @unique
+  insurer      Insurer
+  productType  String // e.g. OC, AC, NNW, majatkowe, podroze, zycie
+  status       PolicyStatus @default(DRAFT)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  startDate DateTime?
+  endDate   DateTime?
+  premium   Decimal?  @db.Decimal(12, 2)
+  currency  String    @default("PLN")
+
+  // Google Drive linkage — the file of record lives in Drive, not the DB
+  driveFolderId String?
+  driveFileId   String? // main signed policy PDF
+
+  createdById String?
+  createdBy   User?   @relation("PolicyCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents PolicyDocument[]
+
+  @@index([status])
+  @@index([insurer])
+  @@index([endDate]) // for renewal reminders
+}
+
+enum DocumentKind {
+  POLICY_PDF
+  PROPOSAL
+  INVOICE
+  ATTACHMENT
+  OTHER
+}
+
+model PolicyDocument {
+  id          String       @id @default(cuid())
+  policyId    String
+  policy      Policy       @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  kind        DocumentKind @default(OTHER)
+  name        String
+  mimeType    String?
+  driveFileId String
+  version     Int          @default(1)
+  createdAt   DateTime     @default(now())
+
+  @@index([policyId])
+}
+
+// ---------------------------------------------------------------------------
+// Audit log — who did what, when (RODO accountability + security forensics)
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String // e.g. "policy.create", "policy.issue", "file.download"
+  entity    String? // "Policy" | "Client" | "User" | ...
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// InterRisk issuance — schools (policyholders), bank-account pool, generated
+// policy documents (DOCX). See `src/lib/interrisk/*` for the flow.
+// ---------------------------------------------------------------------------
+
+// The policyholder ("Ubezpieczający") created at issuance time. NOT the same as
+// the imported reference directory (see SchoolRecord below).
+model School {
+  id             String   @id @default(cuid())
+  nazwa          String
+  adres          String
+  regonPesel     String
+  telefon        String
+  email          String
+  kontaktNazwa   String
+  kontaktTelefon String
+  kontaktEmail   String
+
+  // Handling agent (defaulted from the matched SchoolRecord, editable by admin)
+  agentId String?
+  agent   Agent?  @relation(fields: [agentId], references: [id])
+  // Soft link to the reference directory row this was filled from (if any)
+  sourceSchoolRecordId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  policies     GeneratedPolicy[]
+  bankAccounts BankAccount[]
+  flyers       GeneratedFlyer[]
+
+  @@index([regonPesel])
+  @@index([agentId])
+}
+
+// Generated ulotka (flyer) PDF, attached to a policyholder.
+model GeneratedFlyer {
+  id          String   @id @default(cuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  templateKey String
+  payment     String // "cash" | "wire"
+  fileName    String
+  fileData    Bytes
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([schoolId])
+}
+
+// Universal account/policy-number pool (one number serves any variant). The
+// policy number = last 6 digits of the account. Free = assigned == false.
+model BankAccount {
+  id                 String    @id @default(cuid())
+  accountNumber      String    @unique
+  variantCode        String? // optional categorisation; real accounts are universal
+  assigned           Boolean   @default(false)
+  assignedToSchoolId String?
+  assignedToPolicyId String?   @unique
+  assignedAt         DateTime?
+  createdAt          DateTime  @default(now())
+
+  school School? @relation(fields: [assignedToSchoolId], references: [id])
+
+  @@index([assigned, createdAt])
+  @@index([variantCode, assigned])
+}
+
+model GeneratedPolicy {
+  id                String   @id @default(cuid())
+  schoolId          String
+  school            School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  variantCode       String
+  templatePath      String
+  fileName          String
+  fileData          Bytes // the generated .docx (stored in DB for now; Drive later)
+  bankAccountNumber String
+  policyNumber      String
+  insurancePeriod   String
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([schoolId])
+}
+
+// ---------------------------------------------------------------------------
+// Agents — admin-managed. Reference schools and policyholders are assigned to
+// an agent.
+// ---------------------------------------------------------------------------
+
+model Agent {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  code      String?  @unique
+  active    Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  schoolRecords SchoolRecord[]
+  policyholders School[]
+
+  @@index([active])
+}
+
+// ---------------------------------------------------------------------------
+// SchoolRecord — imported nationwide school directory (reference/lead data,
+// ~28k rows). Populated by `npm run import:schools`. This is NOT a policyholder.
+// ---------------------------------------------------------------------------
+
+model SchoolRecord {
+  id              String @id // deterministic: sha1(regonNormalized|name)
+  regonRaw        String
+  regonNormalized String // digits only, left-padded to 9 for <=9-digit REGONs
+  type            String?
+  name            String
+  voivodeship     String?
+  county          String?
+  commune         String?
+  city            String?
+  localityType    String?
+  street          String?
+  buildingNumber  String?
+  apartmentNumber String?
+  postalCode      String?
+  postOffice      String?
+  phone           String?
+  email           String?
+  website         String?
+  publicStatus    String?
+  studentCount    Int?
+
+  assignedAgentId String?
+  assignedAgent   Agent?  @relation(fields: [assignedAgentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([regonNormalized])
+  @@index([name])
+  @@index([city])
+  @@index([voivodeship])
+  @@index([assignedAgentId])
+}

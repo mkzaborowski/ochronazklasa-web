@@ -1,0 +1,15 @@
+# Production Caddyfile for the Docker Compose stack.
+# Copy to /opt/ochrona/Caddyfile on the server and set your real domain.
+# Caddy auto-provisions HTTPS via Let's Encrypt (needs DNS + ports 80/443 open).
+
+panel.twojadomena.pl {
+	encode zstd gzip
+	reverse_proxy app:3000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}

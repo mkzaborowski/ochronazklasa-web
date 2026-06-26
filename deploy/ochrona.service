@@ -1,0 +1,22 @@
+[Unit]
+Description=Ochrona z Klasa (Next.js)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=ochrona
+WorkingDirectory=/opt/ochrona/app
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+# Next.js reads .env / .env.production from WorkingDirectory automatically.
+ExecStart=/opt/ochrona/app/node_modules/.bin/next start -H 127.0.0.1 -p 3000
+Restart=always
+RestartSec=5
+# Light hardening
+NoNewPrivileges=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

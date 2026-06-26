@@ -1,0 +1,61 @@
+# Production stack for the Hetzner VPS: Postgres + migrations + app + Caddy.
+# Lives in /opt/ochrona on the server alongside .env and Caddyfile.
+#   docker compose -f docker-compose.prod.yml pull && up -d
+# APP_IMAGE is set by the GitHub Actions deploy job (sed into .env).
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    # Not published to the host — only reachable on the compose network.
+
+  # One-shot: apply Prisma migrations, then exit. App waits for it to succeed.
+  migrate:
+    image: ${APP_IMAGE}
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    command: ["npx", "prisma", "migrate", "deploy"]
+
+  app:
+    image: ${APP_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
