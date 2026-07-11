@@ -62,6 +62,11 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<Form>(EMPTY);
   const [period, setPeriod] = useState<string>(INSURANCE_PERIODS[0].value);
+  // Data wystawienia — printed in the policy's signature block. Defaults to
+  // today; editable so all policies from a period can share one date.
+  const [issueDate, setIssueDate] = useState<string>(() =>
+    new Date().toISOString().slice(0, 10),
+  );
   const [variants, setVariants] = useState<string[]>([]);
   const [preview, setPreview] = useState<PreviewRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -163,6 +168,7 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
       const res = await generatePolicies({
         ...form,
         insurancePeriod: period,
+        issueDate,
         variants,
         agentId,
         sourceSchoolRecordId: sourceId,
@@ -330,6 +336,19 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
                   <span className="ml-auto font-mono text-muted-foreground">{p.value}</span>
                 </label>
               ))}
+
+              <Field label="Data wystawienia polisy" required>
+                <Input
+                  type="date"
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  className="max-w-48"
+                />
+              </Field>
+              <p className="text-xs text-muted-foreground">
+                Drukowana na polisie (Miejscowość, data). Domyślnie dzisiejsza —
+                możesz ustawić np. wspólną datę lipcową dla wszystkich polis z lipca.
+              </p>
             </div>
           )}
 
@@ -353,7 +372,13 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
           )}
 
           {step === 5 && (
-            <Review form={form} period={period} preview={preview} pending={pending} />
+            <Review
+              form={form}
+              period={period}
+              issueDate={issueDate}
+              preview={preview}
+              pending={pending}
+            />
           )}
 
           {error && (
@@ -470,11 +495,13 @@ function Field({
 function Review({
   form,
   period,
+  issueDate,
   preview,
   pending,
 }: {
   form: Form;
   period: string;
+  issueDate: string;
   preview: PreviewRow[] | null;
   pending: boolean;
 }) {
@@ -502,7 +529,9 @@ function Review({
 
       <section className="grid gap-1">
         <h3 className="font-medium">Okres ubezpieczenia</h3>
-        <p className="font-mono text-muted-foreground">{period}</p>
+        <p className="font-mono text-muted-foreground">
+          {period} · data wystawienia: {issueDate.split("-").reverse().join(".")}
+        </p>
       </section>
 
       <section className="grid gap-2">

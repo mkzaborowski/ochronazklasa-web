@@ -16,6 +16,7 @@ export type PolicyFieldData = {
   okres_ubezpieczenia: string;
   numer_polisy: string;
   numer_konta_bankowego: string;
+  data_wystawienia: string; // DD.MM.YYYY, printed in the signature block
 };
 
 export type SchoolInput = {
@@ -29,10 +30,17 @@ export type SchoolInput = {
   kontaktEmail: string;
 };
 
+/** Format an ISO date (yyyy-mm-dd) as DD.MM.YYYY for the policy signature block. */
+export function formatIssueDate(iso: string): string {
+  const m = iso.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : iso;
+}
+
 export function buildFieldData(
   school: SchoolInput,
   insurancePeriod: string,
   accountNumber: string,
+  issueDate: string, // DD.MM.YYYY
 ): PolicyFieldData {
   return {
     ubezpieczajacy_nazwa: school.nazwa,
@@ -46,6 +54,7 @@ export function buildFieldData(
     okres_ubezpieczenia: insurancePeriod,
     numer_polisy: policyNumberFromAccount(accountNumber),
     numer_konta_bankowego: accountNumber,
+    data_wystawienia: issueDate,
   };
 }
 

@@ -5,7 +5,11 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth-helpers";
 import { logAudit } from "@/lib/audit";
 import { isVariantCode, type VariantCode } from "@/lib/interrisk/variants";
-import { selectFlyerTemplate } from "@/lib/flyers/flyer-template-registry";
+import {
+  selectFlyerTemplate,
+  periodKeyFromInsurancePeriod,
+  displayPeriod,
+} from "@/lib/flyers/flyer-template-registry";
 import { generateFlyerPdf } from "@/lib/flyers/generate-flyer";
 import type { PaymentType } from "@/lib/flyers/flyer-types";
 
@@ -32,9 +36,13 @@ export async function generateFlyer(
   const variants = school.policies
     .map((p) => p.variantCode)
     .filter(isVariantCode) as VariantCode[];
-  const tpl = selectFlyerTemplate(variants, payment);
+  const insurancePeriod = school.policies[0]?.insurancePeriod ?? "";
+  const period = periodKeyFromInsurancePeriod(insurancePeriod);
+  const tpl = selectFlyerTemplate(variants, payment, period);
   if (!tpl) {
-    return { error: "Brak ulotki dla tej kombinacji wariantów i formy płatności." };
+    return {
+      error: `Brak ulotki dla tej kombinacji wariantów (${period === "2Y" ? "2 lata" : "1 rok"}, ${payment === "cash" ? "gotówka" : "przelew"}).`,
+    };
   }
 
   const rows = school.policies
@@ -57,6 +65,7 @@ export async function generateFlyer(
       payment,
       rows,
       schoolName: school.nazwa,
+      insurancePeriod: displayPeriod(insurancePeriod),
       opiekun: { name: school.agent.name, phone: school.agent.phone ?? "", email: school.agent.email },
     });
     bytes = doc.bytes;

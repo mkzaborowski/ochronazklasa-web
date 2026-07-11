@@ -7,18 +7,10 @@ import { FLYER_TEMPLATES } from "./flyer-template-registry";
 /** The agency's general service line (first number on every flyer). */
 export const SERVICE_LINE = "533 533 931";
 
-const SCHOOL_KW = /SZKO|PODSTAWOW|LICEUM|PRZEDSZKOL|ZESP|TECHNIKUM|BRAN|GIMN|OSRODEK|OŚRODEK|\bNR\b/i;
-
-function formatPhone(p: string): string {
-  const d = p.replace(/\D/g, "");
-  return d.length === 9 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : p;
-}
-
 /**
- * The flyer form uses standard PDF fonts (WinAnsi). To avoid encode crashes we
- * fold Polish letters to ASCII on the values we write. We never flatten and we
- * save with updateFieldAppearances:false, so the template's own Polish fields
- * (e.g. "zł" labels) keep their original appearance untouched.
+ * The flyer forms use standard PDF fonts (WinAnsi); Polish letters are folded
+ * to ASCII on written values. The template's own Polish fields are untouched
+ * (no flatten; appearances regenerated only for fields we set).
  * TODO: embed a Unicode font (fontkit) to preserve diacritics in names.
  */
 function fold(s: string): string {
@@ -29,18 +21,16 @@ function fold(s: string): string {
     .replace(/Ł/g, "L");
 }
 
-type Item = { f: PDFTextField; y: number; v: string };
+function formatPhone(p: string): string {
+  const d = p.replace(/\D/g, "");
+  return d.length === 9 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : p;
+}
 
 /**
- * Generate a flyer by FILLING the template's AcroForm fields (the dynamic data
- * lives in text fields) and flattening. Fields are classified by their example
- * value and ordered by Y, so the generic field names (Text1…) don't matter.
- *
- *  - "A-A NNNNNN"  -> policy number (one per variant, top→bottom)
- *  - "NN NNNN …"   -> bank account (wire only)
- *  - "… | …"       -> phones: keep the service line, replace the agent's number
- *  - "…@…"         -> opiekun email
- *  - school keyword-> school name; remaining ALL-CAPS name -> opiekun name
+ * Generate a flyer ("ulotka") by filling the template's AcroForm fields using
+ * the offline field→role map from `<key>.fields.json` (see
+ * scripts/extract-flyer-fields.mjs). Opiekun = the assigned agent; the general
+ * service line stays first in the phone field.
  */
 export async function generateFlyerPdf(ctx: FlyerContext): Promise<GeneratedDocument> {
   const tplDef = FLYER_TEMPLATES.find((t) => t.key === ctx.templateKey);
@@ -50,74 +40,61 @@ export async function generateFlyerPdf(ctx: FlyerContext): Promise<GeneratedDocu
     readFile(path.join(process.cwd(), tplDef.templatePath)),
     readFile(path.join(process.cwd(), tplDef.fieldsPath), "utf8"),
   ]);
-  const fields: FlyerFields = JSON.parse(fieldsRaw);
+  const spec: FlyerFields = JSON.parse(fieldsRaw);
 
   const pdf = await PDFDocument.load(pdfBytes);
   const form = pdf.getForm();
   const helv = await pdf.embedFont(StandardFonts.Helvetica);
-  // Set a field's value AND regenerate just its appearance (ASCII-safe), so we
-  // never touch the template's own Polish fields.
-  const setText = (f: PDFTextField, text: string) => {
+
+  const setText = (name: string, text: string) => {
+    let f: PDFTextField;
+    try {
+      f = form.getTextField(name);
+    } catch {
+      return; // field vanished from the template — skip rather than fail
+    }
     f.setText(fold(text));
     try {
       f.updateAppearances(helv);
     } catch {
-      /* leave default */
+      /* keep default appearance */
     }
   };
 
-  const items: Item[] = [];
-  for (const f of form.getFields()) {
-    if (f.constructor.name !== "PDFTextField") continue;
-    const tf = f as PDFTextField;
-    let y = 0;
-    try {
-      y = tf.acroField.getWidgets()[0].getRectangle().y;
-    } catch {
-      /* no widget */
+  for (const def of spec.fields) {
+    switch (def.role) {
+      case "policy": {
+        const variant = spec.variants[def.idx ?? 0];
+        const row = ctx.rows.find((r) => r.variantCode === variant);
+        if (row) setText(def.name, `${def.prefixAA === false ? "" : "A-A "}${row.policyNumber}`);
+        break;
+      }
+      case "account": {
+        const variant = spec.variants[def.idx ?? 0];
+        const row = ctx.rows.find((r) => r.variantCode === variant);
+        if (row?.accountNumber) setText(def.name, row.accountNumber);
+        break;
+      }
+      case "school":
+        if (ctx.schoolName) setText(def.name, ctx.schoolName.toUpperCase());
+        break;
+      case "period":
+        if (ctx.insurancePeriod) setText(def.name, ctx.insurancePeriod);
+        break;
+      case "opiekunName":
+        setText(def.name, ctx.opiekun.name.toUpperCase());
+        break;
+      case "opiekunPhone":
+        setText(def.name, `${SERVICE_LINE} | ${formatPhone(ctx.opiekun.phone)}`);
+        break;
+      case "opiekunEmail":
+        setText(def.name, ctx.opiekun.email);
+        break;
+      case "deadline":
+        break; // left as authored in the template
     }
-    items.push({ f: tf, y, v: (tf.getText() ?? "").trim() });
   }
 
-  const policy: Item[] = [];
-  const account: Item[] = [];
-  const names: Item[] = [];
-  let email: Item | undefined;
-  let phone: Item | undefined;
-  let school: Item | undefined;
-
-  for (const it of items) {
-    const v = it.v;
-    if (/^A-?A[\s ]*\d{3,}/.test(v)) policy.push(it);
-    else if (/^\d{2}[\s ]\d{4}[\s ]\d{4}/.test(v)) account.push(it);
-    else if (v.includes("@")) email = it;
-    else if (v.includes("|") || /\d{3}\s+\d{3}\s+\d{3}/.test(v)) phone = it;
-    else if (SCHOOL_KW.test(v)) school = it;
-    else if (/^\s*\d+\s*(z[łl]|PLN)/i.test(v)) continue; // price label (static)
-    else if (/\d{1,2}[.\-]\d{1,2}[.\-]\d{4}/.test(v)) continue; // date/period
-    else if (/[A-ZŁ]/.test(v) && !/\d/.test(v)) names.push(it); // candidate opiekun name
-  }
-
-  policy.sort((a, b) => b.y - a.y); // top → bottom
-  account.sort((a, b) => b.y - a.y);
-
-  fields.variants.forEach((variant, i) => {
-    const row = ctx.rows.find((r) => r.variantCode === variant);
-    if (!row) return;
-    if (policy[i]) setText(policy[i].f, `A-A ${row.policyNumber}`);
-    if (ctx.payment === "wire" && account[i] && row.accountNumber) {
-      setText(account[i].f, row.accountNumber);
-    }
-  });
-
-  if (school && ctx.schoolName) setText(school.f, ctx.schoolName.toUpperCase());
-  const nameField = names.sort((a, b) => a.y - b.y)[0]; // bottom-most = opiekun
-  if (nameField) setText(nameField.f, ctx.opiekun.name.toUpperCase());
-  if (phone) setText(phone.f, `${SERVICE_LINE} | ${formatPhone(ctx.opiekun.phone)}`);
-  if (email) setText(email.f, ctx.opiekun.email);
-
-  // Do NOT flatten / regenerate all appearances — that would choke on the
-  // template's own Polish fields. Keep only the fields we set.
   const out = await pdf.save({ updateFieldAppearances: false });
   return {
     fileName: `ulotka_${ctx.templateKey}.pdf`,
@@ -126,4 +103,9 @@ export async function generateFlyerPdf(ctx: FlyerContext): Promise<GeneratedDocu
   };
 }
 
-export { selectFlyerTemplate, availableFlyersForCombination } from "./flyer-template-registry";
+export {
+  selectFlyerTemplate,
+  availableFlyersForCombination,
+  periodKeyFromInsurancePeriod,
+  displayPeriod,
+} from "./flyer-template-registry";

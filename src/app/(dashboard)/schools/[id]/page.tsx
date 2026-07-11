@@ -4,7 +4,10 @@ import { ArrowLeft, Download, FileText } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { POLICY_VARIANTS, isVariantCode, type VariantCode } from "@/lib/interrisk/variants";
-import { availableFlyersForCombination } from "@/lib/flyers/flyer-template-registry";
+import {
+  availableFlyersForCombination,
+  periodKeyFromInsurancePeriod,
+} from "@/lib/flyers/flyer-template-registry";
 import { deleteSchool } from "@/lib/actions/issue";
 import { deleteFlyer } from "@/lib/actions/flyers";
 import { Button } from "@/components/ui/button";
@@ -44,8 +47,9 @@ export default async function SchoolProfilePage({
     .catch(() => []);
 
   const variants = school.policies.map((p) => p.variantCode).filter(isVariantCode) as VariantCode[];
+  const flyerPeriod = periodKeyFromInsurancePeriod(school.policies[0]?.insurancePeriod ?? "");
   const availablePayments = [
-    ...new Set(availableFlyersForCombination(variants).map((t) => t.payment)),
+    ...new Set(availableFlyersForCombination(variants, flyerPeriod).map((t) => t.payment)),
   ];
 
   return (

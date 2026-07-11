@@ -39,13 +39,16 @@ directory (~28k rows, leads). `Agent` owns `SchoolRecord`s and `School`s. Don't
 conflate them.
 
 ## Status
-Phases 0–4 done. Auth guard in `proxy.ts`; dev-only `AUTH_DISABLED=true` bypasses
-it for DB-less preview. InterRisk wizard at `/schools/new` (real templates in
-`templates/policies/*.docx`, all 13 working). REGON→`SchoolRecord` / PESEL→`Client`
-autofill (`lookupPolicyholder`). Agents at `/agents`, school directory at
-`/directory` (server-paginated). Import dir: `npm run import:schools`. Flyer
-generation scaffolded in `src/lib/flyers/*` (awaiting PDF templates). Ergo Hestia
-issuance + Drive upload still to come.
+Phases 0–4 done + prod live on Hetzner (Docker Compose + GHCR pipeline, see
+`DEPLOY.md`; schema changes need a migration in `prisma/migrations/`, prod runs
+`migrate deploy`). Auth guard in `proxy.ts`; dev-only `AUTH_DISABLED=true`
+bypasses it. InterRisk wizard at `/schools/new` (13 real DOCX templates incl.
+editable issue date `{{data_wystawienia}}`; agent required). REGON→`SchoolRecord`
+/ PESEL→`Client` autofill; manual phone/email edits sync back to `SchoolRecord`.
+Ulotki: 12 combos (payment × period 1Y/2Y × variants) registered in
+`src/lib/flyers/flyer-template-registry.ts`; field→role maps built offline via
+`npm run build-flyer-fields` (extend its MAP for new PDFs). Ergo Hestia + Drive
+upload still to come.
 
 ## Commands (extra)
 `npm run import:schools` (XLSX→SchoolRecord), `npm run seed-accounts`,

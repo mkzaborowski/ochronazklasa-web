@@ -1,0 +1,49 @@
+{
+  "payment": "cash",
+  "period": "2Y",
+  "variants": [
+    "65PLNV50",
+    "85PLNV50",
+    "125PLNV50"
+  ],
+  "fields": [
+    {
+      "name": "Text1",
+      "role": "school"
+    },
+    {
+      "name": "Text6",
+      "role": "opiekunEmail"
+    },
+    {
+      "name": "Text4",
+      "role": "opiekunName"
+    },
+    {
+      "name": "Text5",
+      "role": "opiekunPhone"
+    },
+    {
+      "name": "Text3",
+      "role": "period"
+    },
+    {
+      "name": "Text7",
+      "role": "policy",
+      "idx": 0,
+      "prefixAA": true
+    },
+    {
+      "name": "Text8",
+      "role": "policy",
+      "idx": 1,
+      "prefixAA": true
+    },
+    {
+      "name": "Text9",
+      "role": "policy",
+      "idx": 2,
+      "prefixAA": true
+    }
+  ]
+}

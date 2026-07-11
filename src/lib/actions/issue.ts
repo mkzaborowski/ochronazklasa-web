@@ -12,7 +12,7 @@ import {
   policyNumberFromAccount,
   type VariantCode,
 } from "@/lib/interrisk/variants";
-import { buildFieldData, generatePolicyDocx } from "@/lib/interrisk/generate";
+import { buildFieldData, formatIssueDate, generatePolicyDocx } from "@/lib/interrisk/generate";
 
 export type PreviewRow =
   | { variantCode: VariantCode; label: string; accountNumber: string; policyNumber: string; error?: undefined }
@@ -110,6 +110,20 @@ export async function generatePolicies(input: unknown): Promise<GenerateResult> 
           },
         });
 
+        // Sync manual corrections (phone/email) back to the reference directory,
+        // so the next REGON lookup autofills the corrected data.
+        const srcId = data.sourceSchoolRecordId?.trim();
+        if (srcId) {
+          await tx.schoolRecord
+            .update({
+              where: { id: srcId },
+              data: { phone: data.telefon, email: data.email },
+            })
+            .catch(() => undefined); // stale source id must not block issuance
+        }
+
+        const issueDateStr = formatIssueDate(data.issueDate);
+
         for (const code of codes) {
           // Claim the next unused account atomically (conditional update wins the race).
           const candidate = await tx.bankAccount.findFirst({
@@ -129,7 +143,7 @@ export async function generatePolicies(input: unknown): Promise<GenerateResult> 
 
           const accountNumber = candidate.accountNumber;
           const policyNumber = policyNumberFromAccount(accountNumber);
-          const fields = buildFieldData(data, data.insurancePeriod, accountNumber);
+          const fields = buildFieldData(data, data.insurancePeriod, accountNumber, issueDateStr);
           const { bytes, fileName } = await generatePolicyDocx(code, fields);
 
           const policy = await tx.generatedPolicy.create({
@@ -142,6 +156,7 @@ export async function generatePolicies(input: unknown): Promise<GenerateResult> 
               bankAccountNumber: accountNumber,
               policyNumber,
               insurancePeriod: data.insurancePeriod,
+              issueDate: new Date(data.issueDate),
               createdById: user.id || null,
             },
           });

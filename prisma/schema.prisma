@@ -285,6 +285,7 @@ model GeneratedPolicy {
   bankAccountNumber String
   policyNumber      String
   insurancePeriod   String
+  issueDate         DateTime? // data wystawienia printed on the policy
   createdById       String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

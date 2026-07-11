@@ -64,7 +64,7 @@ const PLACEHOLDERS = [
   "ubezpieczajacy_nazwa", "ubezpieczajacy_adres", "ubezpieczajacy_regon_pesel",
   "ubezpieczajacy_telefon", "ubezpieczajacy_email", "kontakt_nazwa",
   "kontakt_telefon", "kontakt_email", "okres_ubezpieczenia", "numer_polisy",
-  "numer_konta_bankowego",
+  "numer_konta_bankowego", "data_wystawienia",
 ];
 
 function convert(xml) {
@@ -119,6 +119,12 @@ function convert(xml) {
     if (/UBEZPIECZAJĄCY/.test(s)) { section = "insured"; continue; }
     if (/OKRES|ZAKRES/.test(s)) { section = null; }
 
+    // Issue date (signature block, e.g. "16.06.2026") -> placeholder
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(s)) {
+      edits.set(i, "{{data_wystawienia}}");
+      continue;
+    }
+
     // Policy number
     if (!policyDone) {
       const inline = s.match(/A-?A\s+(\d{4,})/);
@@ -126,6 +132,11 @@ function convert(xml) {
       if (/A-?A\s*$/.test(s)) {
         const nj = nextMeaningful(i);
         if (nj >= 0 && /^\d{4,}$/.test(txt(nj))) { edits.set(nj, "{{numer_polisy}}"); policyDone = true; continue; }
+        // static "A-A" with an EMPTY slot after it (blank forms): put the
+        // number inside the A-A token itself — never duplicate the "A-A".
+        edits.set(i, T[i].inner.replace(/A-?A\s*$/, "A-A {{numer_polisy}}"));
+        policyDone = true;
+        continue;
       }
       if (/Wniosek\/Polisa|Polisa\b/.test(s) && !/A-?A/.test(s)) {
         const nj = nextMeaningful(i);
@@ -184,23 +195,54 @@ function convert(xml) {
     if (i >= 0) { setEnd(colonTarget(i), " {{kontakt_email}}"); present.add("kontakt_email"); }
   }
 
-  // Fallbacks: guarantee policy + account placeholders exist somewhere sensible
+  // Issue-date fallback (blank forms): no example date — append after "OLSZTYN,"
+  // in the signature line ("Miejscowość, data").
+  const dateDone = [...edits.values()].some((v) => v.includes("{{data_wystawienia}}"));
+  if (!dateDone) {
+    const oj = T.findIndex((_, i) => /^OLSZTYN,?$/.test(txt(i)));
+    if (oj >= 0) setEnd(oj, " {{data_wystawienia}}");
+    else notes.push("brak daty wystawienia");
+  }
+
+  // Fallback: guarantee the policy-number placeholder exists somewhere sensible
   if (!policyDone) {
     const pj = T.findIndex((_, i) => /Polisa\b/.test(txt(i)));
     if (pj >= 0) { setEnd(pj, " A-A {{numer_polisy}}"); policyDone = true; }
   }
-  if (!accountDone) {
-    const aj = T.findIndex((_, i) => /Vienna Insurance Group/.test(txt(i)));
-    if (aj >= 0) { setEnd(aj, " {{numer_konta_bankowego}}"); accountDone = true; }
-  }
   if (!policyDone) notes.push("brak nr polisy");
-  if (!accountDone) notes.push("brak nr konta");
 
   // Apply edits back-to-front
   const idxs = [...edits.keys()].sort((a, b) => b - a);
   for (const k of idxs) {
     xml = xml.slice(0, T[k].start) + `<w:t${T[k].attrs}>${edits.get(k)}</w:t>` + xml.slice(T[k].end);
   }
+
+  // Account fallback (blank forms): the account belongs in the EMPTY table cell
+  // right after the "Nr konta bankowego …" label cell — never glued to the label.
+  if (!accountDone) {
+    const li = xml.indexOf("Nr konta bankowego");
+    if (li >= 0) {
+      const labelCellEnd = xml.indexOf("</w:tc>", li);
+      const m = labelCellEnd >= 0 ? /<w:tc[ >]/.exec(xml.slice(labelCellEnd)) : null;
+      if (m) {
+        const tcStart = labelCellEnd + m.index;
+        const cellEnd = xml.indexOf("</w:tc>", tcStart);
+        let cell = xml.slice(tcStart, cellEnd);
+        const run =
+          `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>` +
+          `<w:t>{{numer_konta_bankowego}}</w:t></w:r>`;
+        const pEnd = cell.lastIndexOf("</w:p>");
+        if (pEnd >= 0) cell = cell.slice(0, pEnd) + run + cell.slice(pEnd);
+        else cell = cell.replace(/<w:p([^>]*)\/>/, `<w:p$1>${run}</w:p>`);
+        if (cell.includes("{{numer_konta_bankowego}}")) {
+          xml = xml.slice(0, tcStart) + cell + xml.slice(cellEnd);
+          accountDone = true;
+        }
+      }
+    }
+  }
+  if (!accountDone) notes.push("brak nr konta");
+
   return { xml, notes };
 }
 

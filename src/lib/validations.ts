@@ -64,6 +64,10 @@ export const schoolSchema = z.object({
 
 export const issuePolicySchema = schoolSchema.extend({
   insurancePeriod: z.string().trim().min(1, "Wybierz okres ubezpieczenia"),
+  issueDate: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Podaj datę wystawienia"),
   variants: z.array(z.string().min(1)).min(1, "Wybierz co najmniej jeden wariant"),
   agentId: z.string().trim().min(1, "Każda polisa musi mieć przypisanego agenta"),
   sourceSchoolRecordId: optionalStr,
