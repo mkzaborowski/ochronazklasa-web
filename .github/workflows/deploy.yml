@@ -54,7 +54,10 @@ jobs:
             set -euo pipefail
             cd /opt/ochrona
             IMAGE_LC=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            # GHCR login only when a PAT is configured (public package needs none)
+            if [ -n "${{ secrets.GHCR_PAT }}" ]; then
+              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            fi
             sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${IMAGE_LC}:${{ github.sha }}|" .env
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
