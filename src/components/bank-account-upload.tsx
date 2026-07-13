@@ -27,8 +27,9 @@ export function BankAccountUpload() {
         className="text-sm file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm"
       />
       <p className="text-xs text-muted-foreground">
-        Plik „Stan druków” (.xlsx). Dodane zostaną tylko numery, których aplikacja
-        jeszcze nie zna — wykorzystanie numerów śledzi aplikacja, nie plik.
+        Plik „Stan druków” (.xlsx). Numery znane aplikacji zachowują stan zapisany
+        w systemie (nadrzędny). Nowe numery są dodawane zgodnie z kolumną
+        „Wykorzystane” z pliku.
       </p>
       <Button type="submit" disabled={pending} className="w-fit">
         <Upload className="size-4" /> {pending ? "Wgrywanie…" : "Wgraj plik"}
@@ -40,7 +41,12 @@ export function BankAccountUpload() {
           <span>
             Wierszy w pliku: {state.summary.totalRows} · unikalnych numerów:{" "}
             {state.summary.candidates} · znanych aplikacji: {state.summary.alreadyHave} ·{" "}
-            <strong>dodano: {state.summary.imported}</strong>
+            <strong>
+              dodano: {state.summary.imported}
+              {state.summary.importedUsed > 0
+                ? ` (w tym ${state.summary.importedUsed} jako wykorzystane wg pliku)`
+                : ""}
+            </strong>
           </span>
         </div>
       ) : null}
