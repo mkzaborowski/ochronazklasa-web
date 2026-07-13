@@ -32,7 +32,7 @@ export async function previewAssignments(variantCodes: string[]): Promise<Previe
     // Universal pool: peek the next N free accounts and map them to the variants.
     const free = await db.bankAccount.findMany({
       where: { assigned: false },
-      orderBy: [{ createdAt: "asc" }, { accountNumber: "asc" }],
+      orderBy: [{ numberValue: { sort: "asc", nulls: "last" } }, { accountNumber: "asc" }],
       take: codes.length,
     });
     codes.forEach((code, i) => {
@@ -128,7 +128,7 @@ export async function generatePolicies(input: unknown): Promise<GenerateResult> 
           // Claim the next unused account atomically (conditional update wins the race).
           const candidate = await tx.bankAccount.findFirst({
             where: { assigned: false },
-            orderBy: [{ createdAt: "asc" }, { accountNumber: "asc" }],
+            orderBy: [{ numberValue: { sort: "asc", nulls: "last" } }, { accountNumber: "asc" }],
           });
           if (!candidate) {
             throw new Error("Brak wolnego konta bankowego — wgraj nowe konta w Ustawieniach.");

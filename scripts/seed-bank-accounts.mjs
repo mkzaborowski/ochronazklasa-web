@@ -28,10 +28,11 @@ try {
   for (const line of lines) {
     const [accountNumber, variantCode] = line.split(",").map((s) => s.trim());
     if (!accountNumber || !variantCode) continue;
+    const numberValue = Number.parseInt(accountNumber.replace(/\D/g, "").slice(-6), 10) || null;
     const res = await db.bankAccount.upsert({
       where: { accountNumber },
-      update: { variantCode },
-      create: { accountNumber, variantCode },
+      update: { variantCode, numberValue },
+      create: { accountNumber, variantCode, numberValue },
     });
     res ? created++ : skipped++;
   }

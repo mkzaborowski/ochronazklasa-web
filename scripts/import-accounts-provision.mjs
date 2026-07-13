@@ -42,6 +42,7 @@ ws.eachRow((row, r) => {
   const used = raw === true || String(raw).toLowerCase() === "true";
   records.push({
     accountNumber: acct,
+    numberValue: Number.parseInt(acct.replace(/\D/g, "").slice(-6), 10) || null,
     variantCode: null,
     assigned: used,
     assignedAt: used ? new Date() : null,

@@ -261,6 +261,9 @@ model GeneratedFlyer {
 model BankAccount {
   id                 String    @id @default(cuid())
   accountNumber      String    @unique
+  // Numeric policy number (last 6 digits of the account) — assignment order,
+  // so one school's policies get consecutive numbers from the list.
+  numberValue        Int?
   variantCode        String? // optional categorisation; real accounts are universal
   assigned           Boolean   @default(false)
   assignedToSchoolId String?
@@ -270,7 +273,7 @@ model BankAccount {
 
   school School? @relation(fields: [assignedToSchoolId], references: [id])
 
-  @@index([assigned, createdAt])
+  @@index([assigned, numberValue])
   @@index([variantCode, assigned])
 }
 
