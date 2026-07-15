@@ -54,8 +54,18 @@ services:
       - caddy_config:/config
     depends_on:
       - app
+    # Shared entrypoint for ALL apps on this server: caddy also joins the
+    # external "edge" network, where other stacks expose their services.
+    # One-time on the server: docker network create edge
+    networks:
+      - default
+      - edge
 
 volumes:
   pgdata:
   caddy_data:
   caddy_config:
+
+networks:
+  edge:
+    external: true

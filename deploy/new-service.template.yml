@@ -1,0 +1,19 @@
+# Template for an additional service on the server (see MULTI-APP.md).
+# Copy to /opt/<name>/docker-compose.yml, adjust image/port/env, then:
+#   docker compose up -d
+# and add a site block to /opt/ochrona/Caddyfile + caddy reload.
+
+services:
+  myapi:
+    image: ghcr.io/mkzaborowski/CHANGE_ME:latest
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "4000" # container-network only; Caddy is the sole public entrypoint
+    mem_limit: 512m
+    networks:
+      - edge
+
+networks:
+  edge:
+    external: true
