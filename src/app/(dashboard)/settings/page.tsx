@@ -1,6 +1,9 @@
+import Link from "next/link";
+import { ListChecks } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BankAccountUpload } from "@/components/bank-account-upload";
+import { Button } from "@/components/ui/button";
+import { BankAccountImport } from "@/components/bank-account-import";
 
 export const dynamic = "force-dynamic";
 
@@ -42,15 +45,24 @@ export default async function SettingsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3">
-              <Stat label="Wszystkie" value={pool.total} />
-              <Stat label="Wolne" value={pool.free} accent="emerald" />
-              <Stat label="Wykorzystane" value={pool.used} />
+              <Stat label="Wszystkie" value={pool.total} href="/settings/pool" />
+              <Stat label="Wolne" value={pool.free} accent="emerald" href="/settings/pool?status=free" />
+              <Stat label="Wykorzystane" value={pool.used} href="/settings/pool?status=reserved" />
             </div>
           )}
 
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/settings/pool" />}
+            className="w-fit"
+          >
+            <ListChecks className="size-4" /> Zarządzaj pulą numerów (przegląd / edycja / usuwanie)
+          </Button>
+
           <div className="grid gap-2 border-t pt-4">
-            <h3 className="text-sm font-medium">Wgraj nowe konta („Stan druków”)</h3>
-            <BankAccountUpload />
+            <h3 className="text-sm font-medium">Wgraj nowe konta („Stan druków”) — z podglądem</h3>
+            <BankAccountImport />
           </div>
         </CardContent>
       </Card>
@@ -62,19 +74,19 @@ function Stat({
   label,
   value,
   accent,
+  href,
 }: {
   label: string;
   value: number;
   accent?: "emerald";
+  href: string;
 }) {
   return (
-    <div className="rounded-lg border p-4">
-      <div
-        className={`text-2xl font-semibold ${accent === "emerald" ? "text-emerald-600" : ""}`}
-      >
+    <Link href={href} className="rounded-lg border p-4 transition-colors hover:bg-accent/40">
+      <div className={`text-2xl font-semibold ${accent === "emerald" ? "text-emerald-600" : ""}`}>
         {value.toLocaleString("pl-PL")}
       </div>
       <div className="text-xs text-muted-foreground">{label}</div>
-    </div>
+    </Link>
   );
 }
