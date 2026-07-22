@@ -1,5 +1,12 @@
 # Hosting more services/APIs on the same Hetzner server
 
+> **SUPERSEDED (2026-07)** — the server layout changed since this was written:
+> **Caddy now runs as its own stack in `/opt/caddy`** (not inside
+> `/opt/ochrona`), and the first extra service (`/opt/ozk-api`) is live.
+> Current, accurate documentation lives in **[docs/server/](docs/server/README.md)**:
+> architecture, service inventory, adding a service, maintenance (`srv` tool),
+> troubleshooting. This file is kept for history only.
+
 How to add apps next to ochronazklasa-web **without endangering it**. The design:
 one shared Caddy (ports 80/443) routes by domain; every app lives in its own
 directory + its own compose stack; stacks meet on the shared `edge` docker
