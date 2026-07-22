@@ -3,6 +3,40 @@
 Symptom → diagnosis → fix. The first three are real incidents from the ozk-api
 rollout (July 2026) — start every session with `srv doctor`.
 
+## Po przełączeniu DNS: `ERR_SSL_PROTOCOL_ERROR` w przeglądarce
+
+**Real incident (przeprowadzka ochronazklasa.pl na serwer).** HTTP działa
+(308 na HTTPS), ale HTTPS nie wstaje. W logach Caddy:
+
+```
+challenge failed ... detail: "92.113.19.3: Invalid response from
+http://ochronazklasa.pl/.well-known/acme-challenge/...: 404"
+```
+
+Czyli Let's Encrypt widział jeszcze **stary** adres IP — Caddy próbował wydać
+certyfikat, zanim DNS się rozpropagował, wpadł w backoff i (mechanizmem
+CertMagic) przełączył się na **staging** LE, żeby nie palić limitów produkcyjnych.
+Do tego został uszkodzony plik blokady:
+`Keeping lock file fresh: invalid character '}' after top-level value`.
+
+**Naprawa** (po tym, jak `dig +short domena` zwraca już IP serwera):
+
+```bash
+cd /opt/caddy
+docker compose exec -T caddy sh -c "rm -f /data/caddy/locks/*.lock"
+docker compose restart caddy
+# certyfikat pojawia się w kilkanaście sekund
+echo | openssl s_client -servername DOMENA -connect DOMENA:443 2>/dev/null | openssl x509 -noout -issuer -dates
+```
+
+Wydawca musi być produkcyjny (`O=Let's Encrypt`); nazwy typu *(STAGING)* /
+*Pretend Pear* oznaczają, że Caddy dalej siedzi na staging — wtedy powtórz po
+ustabilizowaniu DNS.
+
+**Uwaga na cache DNS samego serwera:** `bosman doctor` może jeszcze pokazywać
+stare IP i stary certyfikat, mimo że z internetu wszystko działa. Wyczyść:
+`resolvectl flush-caches`.
+
 ## HTTPS: `tlsv1 alert internal error` (curl exit 35)
 
 **Meaning:** Caddy answered on 443 but **has no certificate for that
