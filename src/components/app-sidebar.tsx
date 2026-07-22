@@ -8,6 +8,7 @@ import {
   FolderOpen,
   FilePlus2,
   Settings,
+  ShoppingCart,
   ShieldCheck,
   School,
   Database,
@@ -43,6 +44,10 @@ const nav = [
       { title: "Szkoły / Ubezpieczający", href: "/schools", icon: School },
       { title: "Wszystkie polisy", href: "/policies", icon: FileText },
     ],
+  },
+  {
+    label: "Sprzedaż online",
+    items: [{ title: "Polisy indywidualne", href: "/online", icon: ShoppingCart }],
   },
   {
     label: "Dane",
