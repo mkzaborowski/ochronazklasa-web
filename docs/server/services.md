@@ -65,20 +65,26 @@ Current routes (keep in sync when editing):
 
 ## /opt/ozk-www — static marketing site (ochronazklasa.pl)
 
-- **Repo:** `mkzaborowski/ochronazklasa` (Vite SPA). No image of its own — a
-  plain `caddy:2` container serves files from a bind-mounted `dist/`.
-- **Files:** `docker-compose.yml`, `Caddyfile-static` (SPA fallback
-  `try_files {path} /index.html`, immutable caching for `/assets/*`), `dist/`.
-- **Deploy:** push to `main` → GH Actions builds with
-  `VITE_API_BASE_URL=https://api.ochronazklasa.pl` and
-  `VITE_PURCHASE_ENABLED` (launch gate) → scp to `dist-new` → **rsync contents
-  into `dist/`** → post-deploy HTTP check.
-- **Gotcha (learned the hard way):** never replace `dist/` with `mv` — it is a
-  bind mount, so the container keeps the old inode and serves 404s. Always
-  sync contents in place (the workflow does). If it ever happens:
-  `cd /opt/ozk-www && docker compose up -d --force-recreate`.
-- **History:** replaced the old shared-hosting scp deploy, which had been
-  failing with i/o timeouts since ~May 2026.
+- **Repo:** `mkzaborowski/ochronazklasa` (Vite SPA); image
+  `ghcr.io/mkzaborowski/ochronazklasa-www` — the built site is baked **into**
+  the image (multi-stage: node build → `caddy:2` serving `/srv`).
+- **Files on server:** only `docker-compose.yml` + `.env` (holds `APP_IMAGE`
+  pinned by CI). **No volumes, no site files on the host** — the stack is
+  stateless.
+- **Deploy:** push to `main` → GH Actions runs tests, builds the image for
+  `linux/amd64` with build args `VITE_API_BASE_URL` and `VITE_PURCHASE_ENABLED`
+  (launch gate — see `LAUNCH.md` in that repo), pushes `:latest` + `:sha`, then
+  SSHes in to pin the SHA, `compose pull && up -d`, and verifies HTTP 200.
+- **Rollback:** `bosman rollback ozk-www` lists available image versions;
+  `bosman rollback ozk-www <sha>` switches in ~10 s.
+- **Image layout:** the ~27 MB of PDFs live in their own layer, so a typical
+  deploy only moves the ~3 MB app layer.
+- **Note:** `VITE_*` values are compile-time — flipping the launch gate means a
+  rebuild (change `PURCHASE_ENABLED` in the workflow and push), not an env edit
+  on the server.
+- **History:** replaced the shared-hosting scp deploy (dead with i/o timeouts
+  since ~May 2026), then a bind-mounted `dist/` — dropped because replacing a
+  bind-mounted directory breaks the mount (see troubleshooting).
 
 ## Not services (do not touch)
 
