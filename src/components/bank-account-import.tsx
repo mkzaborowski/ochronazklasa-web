@@ -24,6 +24,9 @@ const STATUS_LABEL: Record<ImportPreviewRow["status"], string> = {
 };
 
 export function BankAccountImport() {
+  // Plik jako jedyne źródło prawdy o wolnej puli: po zatwierdzeniu zostają
+  // wyłącznie numery z pliku. Domyślnie wyłączone, bo to operacja kasująca.
+  const [zastapPule, setZastapPule] = useState(false);
   const [preview, previewAction, previewPending] = useActionState<PreviewState, FormData>(
     previewBankAccountImport,
     {},
@@ -67,10 +70,13 @@ export function BankAccountImport() {
           accountNumber: r.accountNumber,
           decision: decisions[r.accountNumber] ?? "free",
         })),
+        zastapPule,
       );
       if (res.error) toast.error(res.error);
       else {
-        const msg = `Dodano ${res.addedFree} wolnych i ${res.addedUsed} wykorzystanych numerów.`;
+        const msg =
+          `Dodano ${res.addedFree} wolnych i ${res.addedUsed} wykorzystanych numerów.` +
+          (res.removed ? ` Usunięto ${res.removed} starych wolnych numerów spoza pliku.` : "");
         setDone(msg);
         toast.success(msg);
       }
@@ -107,6 +113,21 @@ export function BankAccountImport() {
 
           {newRows.length > 0 ? (
             <>
+              <label className="flex items-start gap-2.5 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-800 dark:bg-amber-950/40">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={zastapPule}
+                  onChange={(e) => setZastapPule(e.target.checked)}
+                />
+                <span>
+                  <b>Zastąp całą pulę tym plikiem.</b> Wolne numery, których nie ma
+                  w pliku, zostaną usunięte, więc w puli zostanie dokładnie to, co
+                  właśnie wgrywasz. Numery przypisane do wystawionych polis są
+                  nietykalne i pozostaną w bazie.
+                </span>
+              </label>
+
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="text-muted-foreground">
                   Zaznaczone: {selected.size || "—"} · ustaw dla{" "}

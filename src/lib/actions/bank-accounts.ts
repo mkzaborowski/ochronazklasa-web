@@ -115,11 +115,20 @@ export type CommitState = {
   addedFree?: number;
   addedUsed?: number;
   skipped?: number;
+  removed?: number;
 };
 
-/** Stage 2: commit the reviewed decisions. Re-validates against the DB. */
+/**
+ * Stage 2: commit the reviewed decisions. Re-validates against the DB.
+ *
+ * With `replacePool` the file becomes the single source of truth for the free
+ * pool: every unassigned number that is NOT in the file gets deleted, so what
+ * remains is exactly what was just uploaded. Numbers already tied to an issued
+ * policy are never touched — deleting those would orphan real documents.
+ */
 export async function commitBankAccountImport(
   decisions: { accountNumber: string; decision: ImportDecision }[],
+  replacePool = false,
 ): Promise<CommitState> {
   const user = await requireRole(["ADMIN"]);
   const wanted = decisions.filter((d) => d.decision !== "skip");
@@ -159,17 +168,32 @@ export async function commitBankAccountImport(
     });
   }
 
+  // Czyszczenie starej puli po wstawieniu nowej, żeby w razie błędu nie zostać
+  // bez żadnych wolnych numerów. Kasujemy wyłącznie nieprzypisane i wyłącznie
+  // te, których nie ma w pliku.
+  let removed = 0;
+  if (replacePool) {
+    const wynik = await db.bankAccount.deleteMany({
+      where: {
+        assigned: false,
+        assignedToPolicyId: null,
+        accountNumber: { notIn: nums },
+      },
+    });
+    removed = wynik.count;
+  }
+
   const addedFree = toInsert.filter((d) => d.decision === "free").length;
   const addedUsed = toInsert.length - addedFree;
   await logAudit({
     userId: user.id,
     action: "bankaccounts.import",
     entity: "BankAccount",
-    metadata: { addedFree, addedUsed, requested: wanted.length },
+    metadata: { addedFree, addedUsed, requested: wanted.length, replacePool, removed },
   });
   revalidatePath("/settings");
   revalidatePath("/settings/pool");
-  return { addedFree, addedUsed, skipped: wanted.length - toInsert.length };
+  return { addedFree, addedUsed, skipped: wanted.length - toInsert.length, removed };
 }
 
 // ---------------------------------------------------------------------------
