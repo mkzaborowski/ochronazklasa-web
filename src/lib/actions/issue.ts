@@ -110,16 +110,37 @@ export async function generatePolicies(input: unknown): Promise<GenerateResult> 
           },
         });
 
-        // Sync manual corrections (phone/email) back to the reference directory,
-        // so the next REGON lookup autofills the corrected data.
+        // Sync manual corrections back to the reference directory, so the next
+        // REGON lookup autofills what the operator actually fixed. Only fields
+        // that map 1:1 onto SchoolRecord are written; the form's `adres` is a
+        // single formatted string built from street/building/postcode/city and
+        // cannot be split back apart reliably, so it is deliberately left alone.
         const srcId = data.sourceSchoolRecordId?.trim();
         if (srcId) {
-          await tx.schoolRecord
-            .update({
-              where: { id: srcId },
-              data: { phone: data.telefon, email: data.email },
-            })
-            .catch(() => undefined); // stale source id must not block issuance
+          const zrodlo = await tx.schoolRecord.findUnique({
+            where: { id: srcId },
+            select: { name: true, phone: true, email: true },
+          });
+          if (zrodlo) {
+            const zmiany: { name?: string; phone?: string; email?: string } = {};
+            if (data.nazwa && data.nazwa !== zrodlo.name) zmiany.name = data.nazwa;
+            if (data.telefon !== (zrodlo.phone ?? "")) zmiany.phone = data.telefon;
+            if (data.email !== (zrodlo.email ?? "")) zmiany.email = data.email;
+
+            // Pusty zapis to zbędny UPDATE i fałszywy wpis w audycie.
+            if (Object.keys(zmiany).length > 0) {
+              await tx.schoolRecord.update({ where: { id: srcId }, data: zmiany });
+              await logAudit({
+                userId: user.id,
+                action: "schoolrecord.sync",
+                entity: "SchoolRecord",
+                entityId: srcId,
+                metadata: { pola: Object.keys(zmiany), regon: data.regonPesel },
+              });
+            }
+          }
+          // Nieaktualny sourceSchoolRecordId nie może zablokować wystawienia -
+          // rekord mógł zniknąć przy ponownym imporcie katalogu.
         }
 
         const issueDateStr = formatIssueDate(data.issueDate);
