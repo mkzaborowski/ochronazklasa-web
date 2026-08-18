@@ -17,7 +17,8 @@
     "import:schools": "node --env-file=.env scripts/import-schools.mjs",
     "gen-templates": "node scripts/generate-sample-templates.mjs",
     "build-flyer-fields": "node scripts/extract-flyer-fields.mjs",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "check:numeracja": "node scripts/sprawdz-numeracje-stron.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

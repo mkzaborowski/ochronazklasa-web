@@ -16,6 +16,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+      # Stopki polis: liczba stron ma być liczona polem NUMPAGES.
+      # Szablony przychodzą od InterRisk z liczbą wpisaną na sztywno.
+      - run: npm run check:numeracja
       - run: npm run lint
       - run: npm run build
         env:
