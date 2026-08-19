@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ETYKIETY_STATUSU, KLASA_STATUSU, pobierzWniosek, type StatusWniosku } from "@/lib/online-api";
 import { OnlineActions } from "@/components/online-actions";
+import { dopasujAgentow } from "@/lib/agents/atrybucja";
 import {
   Table,
   TableBody,
@@ -45,6 +46,8 @@ export default async function OnlineApplicationPage({
   }
 
   const o = w.oplacajacyPelny;
+  // Nazwisko agenta dokłada panel — usługa sprzedaży zna wyłącznie kod.
+  const agent = (await dopasujAgentow([w.kodAgenta])).get(w.kodAgenta ?? "");
   const zgodyTak = Object.values(w.zgody ?? {}).filter(Boolean).length;
   const zgodyWszystkie = Object.keys(w.zgody ?? {}).length;
 
@@ -96,6 +99,21 @@ export default async function OnlineApplicationPage({
           <Pole etykieta="Kwota" wartosc={`${kwota(w.kwotaZl)} zł`} />
           <Pole etykieta="Złożony" wartosc={w.utworzono} />
           <Pole etykieta="Płatność P24" wartosc={w.p24OrderId ?? "—"} />
+          <Pole
+            etykieta="Polecający agent"
+            wartosc={
+              !w.kodAgenta ? (
+                <span className="font-normal text-muted-foreground">bez rekomendacji</span>
+              ) : agent ? (
+                <Link href={`/agents/${agent.id}`} className="hover:underline">
+                  {agent.name}{" "}
+                  <span className="font-normal text-muted-foreground">({w.kodAgenta})</span>
+                </Link>
+              ) : (
+                <span className="text-amber-700">{w.kodAgenta} (nieznany kod)</span>
+              )
+            }
+          />
         </div>
 
         <div className="rounded-lg border bg-card p-5">

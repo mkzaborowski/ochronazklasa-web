@@ -24,7 +24,16 @@ export interface WniosekSkrot {
   koniecOchrony: string;
   oplacajacy: { imie: string; nazwisko: string; email: string; telefon: string };
   ubezpieczeni: { imie: string; nazwisko: string; placowka: string }[];
+  /** kod z linku polecającego; null = zakup bez rekomendacji */
+  kodAgenta: string | null;
   blad: string | null;
+}
+
+export interface SprzedazAgenta {
+  kod: string;
+  wnioski: number;
+  oplacone: number;
+  przychodZl: number;
 }
 
 export interface Statystyki {
@@ -33,7 +42,14 @@ export interface Statystyki {
   certyfikaty: number;
   przychodZl: number;
   dzieci: number;
+  /** wnioski bez linku polecającego — sprzedaż niczyja */
+  bezAgenta: number;
+  /** rozbicie na kody agentów, liczone zawsze z całości, nie z filtru */
+  wgAgenta: SprzedazAgenta[];
 }
+
+/** Wartość filtru „bez rekomendacji". Nie może być prawidłowym kodem agenta. */
+export const BEZ_AGENTA = "-";
 
 export interface WniosekPelny extends WniosekSkrot {
   p24OrderId: number | null;
@@ -90,10 +106,13 @@ const zapytaj = async <T>(sciezka: string, init?: RequestInit): Promise<T> => {
   return odpowiedz.json() as Promise<T>;
 };
 
-export const pobierzWnioski = (filtry: { status?: string; szukaj?: string } = {}) => {
+export const pobierzWnioski = (
+  filtry: { status?: string; szukaj?: string; agent?: string } = {},
+) => {
   const p = new URLSearchParams();
   if (filtry.status) p.set("status", filtry.status);
   if (filtry.szukaj) p.set("szukaj", filtry.szukaj);
+  if (filtry.agent) p.set("agent", filtry.agent);
   const qs = p.toString();
   return zapytaj<{ statystyki: Statystyki; wnioski: WniosekSkrot[] }>(
     `/api/admin/applications${qs ? `?${qs}` : ""}`,

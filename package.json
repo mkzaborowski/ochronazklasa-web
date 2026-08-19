@@ -18,7 +18,8 @@
     "gen-templates": "node scripts/generate-sample-templates.mjs",
     "build-flyer-fields": "node scripts/extract-flyer-fields.mjs",
     "postinstall": "prisma generate",
-    "check:numeracja": "node scripts/sprawdz-numeracje-stron.mjs"
+    "check:numeracja": "node scripts/sprawdz-numeracje-stron.mjs",
+    "agenci:kody": "node --env-file=.env scripts/nadaj-kody-agentom.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

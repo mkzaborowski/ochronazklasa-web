@@ -21,10 +21,13 @@ export function NavUser({ user }: { user: UserInfo | null }) {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <div className="flex items-center gap-2 rounded-md p-1">
+        {/* Stopka siedzi na granatowym tle menu, więc barwy bierze z tokenów
+            sidebara. Domyślne `muted-foreground` jest liczone dla jasnej karty
+            i na granacie schodzi poniżej progu czytelności. */}
+        <div className="flex items-center gap-2 rounded-md p-1 text-sidebar-foreground">
           <Avatar className="size-8 rounded-md">
             {user?.image ? <AvatarImage src={user.image} alt="" /> : null}
-            <AvatarFallback className="rounded-md text-xs">
+            <AvatarFallback className="rounded-md bg-sidebar-accent text-xs text-sidebar-accent-foreground">
               {user ? initials(user) : "—"}
             </AvatarFallback>
           </Avatar>
@@ -32,7 +35,7 @@ export function NavUser({ user }: { user: UserInfo | null }) {
             <span className="truncate font-medium">
               {user?.name ?? user?.email ?? "Tryb podglądu"}
             </span>
-            <span className="truncate text-xs text-muted-foreground">
+            <span className="truncate text-xs text-sidebar-foreground/70">
               {user?.email ?? "brak zalogowanego użytkownika"}
             </span>
           </div>
@@ -41,7 +44,7 @@ export function NavUser({ user }: { user: UserInfo | null }) {
               <button
                 type="submit"
                 title="Wyloguj"
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="inline-flex size-7 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 <LogOut className="size-4" />
               </button>

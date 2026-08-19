@@ -5,20 +5,47 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
 import { logAudit } from "@/lib/audit";
 import { agentSchema } from "@/lib/validations";
+import { normalizujKod, proponujKod } from "@/lib/agents/kod";
 import type { ActionState } from "@/lib/actions/clients";
 
 const nn = (v?: string) => (v && v.trim() !== "" ? v.trim() : null);
+
+/**
+ * Wszystkie kody, które są już w użyciu — łącznie z historycznymi.
+ * Historyczne też muszą być zajęte: gdyby nowy agent dostał kod porzucony
+ * przez kogoś innego, sprzedaż sprzed lat trafiłaby do niewłaściwej osoby.
+ */
+async function zajeteKody(): Promise<string[]> {
+  const agenci = await db.agent.findMany({ select: { code: true, codeHistory: true } });
+  return agenci.flatMap((a) => [a.code, ...a.codeHistory]).filter((k): k is string => Boolean(k));
+}
 
 export async function createAgent(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireRole(["ADMIN"]);
   const parsed = agentSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Błąd walidacji" };
   const d = parsed.data;
+
+  // KAŻDY agent dostaje kod, także gdy pole zostało puste — bez kodu nie ma
+  // linku polecającego, a bez linku agent nie ma jak zapisać sobie sprzedaży.
+  const zajete = await zajeteKody();
+  const podany = normalizujKod(d.code);
+  if (nn(d.code) && !podany) {
+    return { error: "Kod może zawierać tylko litery, cyfry i myślnik (2–16 znaków)." };
+  }
+  if (podany && zajete.includes(podany)) {
+    return { error: `Kod ${podany} jest już zajęty.` };
+  }
+  const kod = podany ?? proponujKod(d.name, zajete);
+
   try {
     const agent = await db.agent.create({
-      data: { name: d.name, email: d.email, phone: nn(d.phone), code: nn(d.code), notes: nn(d.notes) },
+      data: { name: d.name, email: d.email, phone: nn(d.phone), code: kod, notes: nn(d.notes) },
     });
-    await logAudit({ userId: user.id, action: "agent.create", entity: "Agent", entityId: agent.id });
+    await logAudit({
+      userId: user.id, action: "agent.create", entity: "Agent", entityId: agent.id,
+      metadata: { code: kod },
+    });
   } catch {
     return { error: "Agent z takim emailem lub kodem już istnieje." };
   }
@@ -35,17 +62,52 @@ export async function updateAgent(
   const parsed = agentSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Błąd walidacji" };
   const d = parsed.data;
+
+  const obecny = await db.agent.findUnique({
+    where: { id: agentId },
+    select: { code: true, codeHistory: true },
+  });
+  if (!obecny) return { error: "Nie znaleziono agenta." };
+
+  const podany = normalizujKod(d.code);
+  if (nn(d.code) && !podany) {
+    return { error: "Kod może zawierać tylko litery, cyfry i myślnik (2–16 znaków)." };
+  }
+  // Wyczyszczenie pola ZOSTAWIA dotychczasowy kod. Skasowanie kodu zerwałoby
+  // linki, które agent zdążył rozdać - a tego nikt by nie zauważył do chwili,
+  // gdy sprzedaż przestaje mu się liczyć.
+  const zajete = (await zajeteKody()).filter(
+    (k) => k !== obecny.code && !obecny.codeHistory.includes(k),
+  );
+  if (podany && zajete.includes(podany)) {
+    return { error: `Kod ${podany} należy do innego agenta.` };
+  }
+  const kod = podany ?? obecny.code ?? proponujKod(d.name, await zajeteKody());
+
+  // Stary kod idzie do historii, żeby wcześniejsza sprzedaż nadal się liczyła.
+  const historia = obecny.codeHistory.filter((k) => k !== kod);
+  if (obecny.code && obecny.code !== kod && !historia.includes(obecny.code)) {
+    historia.push(obecny.code);
+  }
+
   try {
     await db.agent.update({
       where: { id: agentId },
-      data: { name: d.name, email: d.email, phone: nn(d.phone), code: nn(d.code), notes: nn(d.notes) },
+      data: {
+        name: d.name, email: d.email, phone: nn(d.phone),
+        code: kod, codeHistory: historia, notes: nn(d.notes),
+      },
     });
-    await logAudit({ userId: user.id, action: "agent.update", entity: "Agent", entityId: agentId });
+    await logAudit({
+      userId: user.id, action: "agent.update", entity: "Agent", entityId: agentId,
+      metadata: obecny.code !== kod ? { codeFrom: obecny.code, codeTo: kod } : undefined,
+    });
   } catch {
     return { error: "Nie udało się zapisać (email/kod muszą być unikalne)." };
   }
   revalidatePath("/agents");
   revalidatePath(`/agents/${agentId}`);
+  revalidatePath("/online");
   return { ok: true };
 }
 

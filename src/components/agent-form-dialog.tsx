@@ -82,8 +82,19 @@ export function AgentFormDialog({ agent }: { agent?: Agent }) {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="code">Kod agenta</Label>
-              <Input id="code" name="code" defaultValue={agent?.code ?? ""} />
+              <Label htmlFor="code">Kod agenta (link polecający)</Label>
+              <Input
+                id="code"
+                name="code"
+                defaultValue={agent?.code ?? ""}
+                placeholder={editing ? undefined : "zostaw puste — nadamy automatycznie"}
+                autoCapitalize="characters"
+              />
+              <p className="text-xs text-muted-foreground">
+                {editing
+                  ? "Zmiana kodu tworzy nowy link. Stary przestaje działać, ale sprzedaż, która już się odbyła, zostaje przy agencie."
+                  : "Trafia do linku ochronazklasa.pl/kup-ubezpieczenie?a=KOD. Puste pole = kod z nazwiska."}
+              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="notes">Notatki</Label>

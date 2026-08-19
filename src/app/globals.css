@@ -48,73 +48,110 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ===========================================================================
+   Barwy marki — te same, którymi żyje ochronazklasa.pl.
+   Wartości celowo w hex, nie w oklch: dzięki temu da się je zgrepować
+   jeden do jednego z `src/styles/efekty.css` na stronie publicznej i od razu
+   widać, czy panel odjechał od marki.
+
+   Zakres zapożyczenia jest świadomie wąski. Krój, granat i błękit niosą
+   rozpoznawalność. Poświaty, shader w tle i animowane gradienty zostają na
+   stronie — tam ogląda je ktoś przez minutę, tutaj siedzi się w tym cały
+   dzień i każdy ruch w tle zabiera uwagę potrzebną gdzie indziej.
+   =========================================================================== */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* granaty i błękity marki */
+  --granat: #0e1a33;
+  --granat-2: #1a2a4a;
+  --granat-3: #2e4370;
+  --blekit: #2563eb;
+  --cyjan: #06b6d4;
+
+  --font-sans: var(--font-marka), ui-sans-serif, system-ui, sans-serif;
+
+  /* Papier w lekko chłodnym odcieniu, jak tło strony — biała karta ma się
+     na nim odcinać bez rysowania ramki wokół wszystkiego. */
+  --background: #f6f9fe;
+  --foreground: var(--granat);
+  --card: #ffffff;
+  --card-foreground: var(--granat);
+  --popover: #ffffff;
+  --popover-foreground: var(--granat);
+
+  /* Przycisk główny w granacie, tak jak CTA na stronie. Błękit zostaje dla
+     stanów aktywnych i obramowań fokusu — inaczej cały ekran krzyczy naraz. */
+  --primary: var(--granat-2);
+  --primary-foreground: #ffffff;
+  --secondary: #eef2fa;
+  --secondary-foreground: var(--granat-2);
+  --muted: #eef2fa;
+  --muted-foreground: #5b6d8c;
+  --accent: #e7edf8;
+  --accent-foreground: var(--granat-2);
+  --destructive: #dc2626;
+
+  --border: #e2ebfc;
+  --input: #dfe7f5;
+  --ring: var(--blekit);
+
+  /* Wykresy idą gradientem marki: błękit → cyjan → fiolet, potem odcienie. */
+  --chart-1: var(--blekit);
+  --chart-2: var(--cyjan);
+  --chart-3: #7c3aed;
+  --chart-4: #6b87c0;
+  --chart-5: #8fabe3;
+
+  --radius: 0.75rem;
+
+  /* Boczne menu jest granatowe — to ono nadaje panelowi twarz i oddziela
+     nawigację od treści bez rysowania kreski. */
+  --sidebar: var(--granat);
+  --sidebar-foreground: #dbe4f5;
+  --sidebar-primary: var(--blekit);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1c2c4d;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #22314f;
+  --sidebar-ring: var(--blekit);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --background: #0b1424;
+  --foreground: #e8eefb;
+  --card: #111d33;
+  --card-foreground: #e8eefb;
+  --popover: #111d33;
+  --popover-foreground: #e8eefb;
+
+  --primary: #3b7bf6;
+  --primary-foreground: #ffffff;
+  --secondary: #1a2740;
+  --secondary-foreground: #e8eefb;
+  --muted: #1a2740;
+  --muted-foreground: #93a5c4;
+  --accent: #1f2e4a;
+  --accent-foreground: #ffffff;
+  --destructive: #f87171;
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: #3b7bf6;
+
+  --chart-1: #60a5fa;
+  --chart-2: #22d3ee;
+  --chart-3: #a78bfa;
+  --chart-4: #8fabe3;
+  --chart-5: #6b87c0;
+
+  --sidebar: #070e1b;
+  --sidebar-foreground: #cfdaee;
+  --sidebar-primary: #3b7bf6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #16233c;
+  --sidebar-accent-foreground: #ffffff;
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: #3b7bf6;
 }
 
 @layer base {
@@ -126,5 +163,33 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Śledzenie zależne od rozmiaru — ta sama zasada co na stronie. Duży tekst
+     czyta się zbyt luźno i potrzebuje ujemnego, drobny odwrotnie. Jedna
+     wartość dla wszystkich rozmiarów jest zawsze gdzieś błędna. */
+  h1 { letter-spacing: -0.022em; }
+  h2, h3 { letter-spacing: -0.014em; }
+  /* Tabele czyta się kolumnami, więc cyfry muszą stać jedna pod drugą. */
+  table { font-variant-numeric: tabular-nums; }
+}
+
+@layer components {
+  /* Pływająca belka nad przewijaną treścią — treść przechodzi pod nią i widać,
+     że coś ją przesłania. Przy kryciu bliskim jedynki rozmycie nie ma czego
+     rozmywać i belka jest po prostu nieprzezroczystym paskiem. */
+  .szklo-belka {
+    background: color-mix(in srgb, var(--background) 72%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 100%, transparent);
+  }
+
+  /* Mniej przezroczystości: materiał staje się matowy, nie znika.
+     Rozmycie kosztuje i przy tym ustawieniu nie ma go po co utrzymywać. */
+  @media (prefers-reduced-transparency: reduce) {
+    .szklo-belka {
+      background: var(--background);
+      backdrop-filter: none;
+    }
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -71,14 +72,28 @@ export function AppSidebar({ user }: { user: UserInfo | null }) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
+            {/* Rozwinięte menu pokazuje znak firmowy ze strony; zwinięte — sam
+                symbol. Ściśnięty logotyp w kolumnie szerokiej na ikonę byłby
+                nieczytelny, a dwa znaki naraz to jeden za dużo. */}
             <SidebarMenuButton size="lg" render={<Link href="/" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground group-data-[collapsible=icon]:flex hidden">
                 <ShieldCheck className="size-4" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Ochrona z Klasą</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  Panel polis
+              <div className="flex min-w-0 flex-1 flex-col gap-1 group-data-[collapsible=icon]:hidden">
+                {/* self-start: bez tego obrazek rozciąga się na szerokość kolumny
+                    (align-items: stretch) i znak ląduje na środku zamiast przy
+                    krawędzi, w jednej linii z resztą menu. */}
+                <Image
+                  src="/logo-ozk-white.svg"
+                  alt="Ochrona z Klasą"
+                  width={400}
+                  height={119}
+                  unoptimized
+                  priority
+                  className="h-5 w-auto self-start"
+                />
+                <span className="text-[11px] tracking-[0.16em] text-sidebar-foreground/60 uppercase">
+                  Panel
                 </span>
               </div>
             </SidebarMenuButton>

@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/table";
 import { AgentFormDialog } from "@/components/agent-form-dialog";
 import { AgentActiveToggle } from "@/components/agent-active-toggle";
+import { KopiujLink } from "@/components/agent-link";
+import { linkPolecajacy } from "@/lib/agents/kod";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +38,7 @@ export default async function AgentsPage() {
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Agenci</h1>
           <p className="text-sm text-muted-foreground">
-            Zarządzanie agentami i przypisaniami szkół.
+            Zarządzanie agentami, przypisaniami szkół i linkami polecającymi.
           </p>
         </div>
         <AgentFormDialog />
@@ -54,6 +56,7 @@ export default async function AgentsPage() {
               <TableRow>
                 <TableHead>Agent</TableHead>
                 <TableHead>Kontakt</TableHead>
+                <TableHead>Link polecający</TableHead>
                 <TableHead className="text-center">Szkoły</TableHead>
                 <TableHead className="text-center">Ubezpieczający</TableHead>
                 <TableHead>Status</TableHead>
@@ -63,7 +66,7 @@ export default async function AgentsPage() {
             <TableBody>
               {agents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     Brak agentów. Dodaj pierwszego agenta.
                   </TableCell>
                 </TableRow>
@@ -74,13 +77,17 @@ export default async function AgentsPage() {
                       <Link href={`/agents/${a.id}`} className="font-medium hover:underline">
                         {a.name}
                       </Link>
-                      {a.code ? (
-                        <Badge variant="secondary" className="ml-2">{a.code}</Badge>
-                      ) : null}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {a.email}
                       {a.phone ? ` · ${a.phone}` : ""}
+                    </TableCell>
+                    <TableCell>
+                      {a.code ? (
+                        <KopiujLink link={linkPolecajacy(a.code)} kod={a.code} />
+                      ) : (
+                        <Badge variant="secondary">brak kodu</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">{a._count.schoolRecords}</TableCell>
                     <TableCell className="text-center">{a._count.policyholders}</TableCell>

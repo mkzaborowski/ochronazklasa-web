@@ -15,7 +15,8 @@ variant) · Prisma 6 / PostgreSQL · Auth.js v5 · Google Drive (service account
 pdf-lib / docxtemplater / exceljs.
 
 ## Conventions
-- UI text is **Polish**; code/comments in English.
+- UI text is **Polish**. Identifiers in English; **comments in Polish** for new
+  code, matching ozk-api and the public site (the older files are still English).
 - shadcn components here use Base UI's **`render={<El/>}` prop, NOT `asChild`**.
 - Route guard is **`src/proxy.ts`** (Next 16 renamed `middleware` → `proxy`).
 - Auth: edge-safe config in `@/auth.config`, full config (adapter/providers) in `@/auth`.
@@ -31,6 +32,11 @@ pdf-lib / docxtemplater / exceljs.
 - `npm run dev` — UI runs without a DB; backend features need `.env`.
 - `npm run build` — must stay green (type-check runs here).
 - `npm run db:push` / `db:migrate` / `db:studio` — Prisma.
+
+## Sales attribution
+Online sales carry an **agent code**, not an agent id — the sales DB is a
+separate service. Rules and the reasoning behind them: `docs/linki-polecajace.md`.
+Never let a bad code reject a purchase.
 
 ## Domain model note
 Two distinct "school" concepts: **`School`** = the policyholder (Ubezpieczający)

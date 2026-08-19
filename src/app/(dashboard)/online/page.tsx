@@ -1,11 +1,14 @@
 import Link from "next/link";
 import {
+  BEZ_AGENTA,
   ETYKIETY_STATUSU,
   KLASA_STATUSU,
   pobierzStanSystemu,
   pobierzWnioski,
   type StatusWniosku,
 } from "@/lib/online-api";
+import { dopasujAgentow } from "@/lib/agents/atrybucja";
+import { db } from "@/lib/db";
 import {
   Table,
   TableBody,
@@ -30,7 +33,7 @@ const kwota = (zl: number) => zl.toLocaleString("pl-PL", { minimumFractionDigits
 export default async function OnlineSalesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; szukaj?: string }>;
+  searchParams: Promise<{ status?: string; szukaj?: string; agent?: string }>;
 }) {
   const filtry = await searchParams;
 
@@ -54,6 +57,20 @@ export default async function OnlineSalesPage({
       </div>
     );
   }
+
+  // Nazwiska agentów dokładamy tutaj: usługa sprzedaży zna wyłącznie kody.
+  const agenci = await dopasujAgentow(dane.wnioski.map((w) => w.kodAgenta));
+  // Wartością filtru są WSZYSTKIE kody agenta, także porzucone — inaczej po
+  // zmianie kodu jego dawna sprzedaż wypadałaby z własnego filtru.
+  const doFiltru = (
+    await db.agent
+      .findMany({
+        where: { code: { not: null } },
+        select: { name: true, code: true, codeHistory: true },
+        orderBy: [{ active: "desc" }, { name: "asc" }],
+      })
+      .catch(() => [])
+  ).map((a) => ({ name: a.name, wartosc: [a.code!, ...a.codeHistory].join(",") }));
 
   const kafelki = [
     { etykieta: "Wnioski", wartosc: dane.statystyki.wszystkie },
@@ -112,10 +129,19 @@ export default async function OnlineSalesPage({
             </option>
           ))}
         </select>
+        <select name="agent" defaultValue={filtry.agent ?? ""} className={fieldClass}>
+          <option value="">Wszyscy agenci</option>
+          <option value={BEZ_AGENTA}>Bez rekomendacji</option>
+          {doFiltru.map((a) => (
+            <option key={a.wartosc} value={a.wartosc}>
+              {a.name}
+            </option>
+          ))}
+        </select>
         <button className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
           Filtruj
         </button>
-        {(filtry.status || filtry.szukaj) && (
+        {(filtry.status || filtry.szukaj || filtry.agent) && (
           <Link href="/online" className="flex h-9 items-center rounded-md border px-4 text-sm">
             Wyczyść
           </Link>
@@ -130,6 +156,7 @@ export default async function OnlineSalesPage({
               <TableHead>Klient</TableHead>
               <TableHead>Zakres</TableHead>
               <TableHead>Kwota</TableHead>
+              <TableHead>Agent</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Certyfikat</TableHead>
             </TableRow>
@@ -137,7 +164,7 @@ export default async function OnlineSalesPage({
           <TableBody>
             {dane.wnioski.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                   Brak wniosków spełniających kryteria.
                 </TableCell>
               </TableRow>
@@ -160,6 +187,9 @@ export default async function OnlineSalesPage({
                   </div>
                 </TableCell>
                 <TableCell className="whitespace-nowrap font-medium">{kwota(w.kwotaZl)} zł</TableCell>
+                <TableCell className="text-sm">
+                  <Agent kod={w.kodAgenta} dopasowany={agenci.get(w.kodAgenta ?? "")} />
+                </TableCell>
                 <TableCell>
                   <span
                     className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -178,5 +208,39 @@ export default async function OnlineSalesPage({
         </Table>
       </div>
     </div>
+  );
+}
+
+/**
+ * Agent przy wniosku. Trzy stany, każdy znaczy co innego:
+ *   brak kodu   — klient przyszedł sam, sprzedaż jest niczyja i tak ma zostać,
+ *   kod znany   — pokazujemy nazwisko z linkiem do profilu,
+ *   kod nieznany— literówka w linku albo agent skasowany; pokazujemy sam kod,
+ *                 bo ktoś się o tę sprzedaż upomni i musi być po czym szukać.
+ */
+function Agent({
+  kod,
+  dopasowany,
+}: {
+  kod: string | null;
+  dopasowany?: { id: string; name: string; active: boolean; poprzedniKod: boolean };
+}) {
+  if (!kod) return <span className="text-muted-foreground">bez rekomendacji</span>;
+  if (!dopasowany) {
+    return (
+      <span className="text-amber-700" title="Kod nie pasuje do żadnego agenta">
+        {kod} <span className="text-xs">(nieznany)</span>
+      </span>
+    );
+  }
+  return (
+    <Link href={`/agents/${dopasowany.id}`} className="hover:underline">
+      {dopasowany.name}
+      {dopasowany.poprzedniKod ? (
+        <span className="ml-1 text-xs text-muted-foreground" title={`stary kod: ${kod}`}>
+          (stary kod)
+        </span>
+      ) : null}
+    </Link>
   );
 }

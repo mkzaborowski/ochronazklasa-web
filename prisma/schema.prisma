@@ -214,7 +214,7 @@ model AuditLog {
 // The policyholder ("Ubezpieczający") created at issuance time. NOT the same as
 // the imported reference directory (see SchoolRecord below).
 model School {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   nazwa          String
   adres          String
   regonPesel     String
@@ -225,8 +225,8 @@ model School {
   kontaktEmail   String
 
   // Handling agent (defaulted from the matched SchoolRecord, editable by admin)
-  agentId String?
-  agent   Agent?  @relation(fields: [agentId], references: [id])
+  agentId              String?
+  agent                Agent?  @relation(fields: [agentId], references: [id])
   // Soft link to the reference directory row this was filled from (if any)
   sourceSchoolRecordId String?
 
@@ -278,9 +278,9 @@ model BankAccount {
 }
 
 model GeneratedPolicy {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   schoolId          String
-  school            School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school            School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   variantCode       String
   templatePath      String
   fileName          String
@@ -290,8 +290,8 @@ model GeneratedPolicy {
   insurancePeriod   String
   issueDate         DateTime? // data wystawienia printed on the policy
   createdById       String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([schoolId])
 }
@@ -302,15 +302,21 @@ model GeneratedPolicy {
 // ---------------------------------------------------------------------------
 
 model Agent {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  code      String?  @unique
-  active    Boolean  @default(true)
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  // Kod polecajacy = jedyne, co laczy sprzedaz online na ochronazklasa.pl
+  // z agentem. Trafia do linku: /kup-ubezpieczenie?a=KOD
+  code        String?  @unique
+  // Kody uzywane wczesniej. Zmiana kodu nie moze odpiac agentowi sprzedazy,
+  // ktore juz sie odbyly - wnioski trzymaja kod z chwili zakupu, a nie
+  // wskaznik na agenta (baza sprzedazy to osobna usluga).
+  codeHistory String[] @default([])
+  active      Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   schoolRecords SchoolRecord[]
   policyholders School[]
@@ -324,7 +330,7 @@ model Agent {
 // ---------------------------------------------------------------------------
 
 model SchoolRecord {
-  id              String @id // deterministic: sha1(regonNormalized|name)
+  id              String  @id // deterministic: sha1(regonNormalized|name)
   regonRaw        String
   regonNormalized String // digits only, left-padded to 9 for <=9-digit REGONs
   type            String?
