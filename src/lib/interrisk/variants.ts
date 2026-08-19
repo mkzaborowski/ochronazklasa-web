@@ -25,26 +25,49 @@ export type PolicyVariant = {
   code: VariantCode;
   label: string;
   templatePath: string; // relative to repo root
+  /**
+   * Roczna składka w złotych. Trzymana jawnie, a nie wyciągana z kodu wariantu
+   * wyrażeniem regularnym: kod jest identyfikatorem pliku i może kiedyś
+   * przestać zaczynać się od liczby, a od tej wartości zależy KOLEJNOŚĆ
+   * numerów polis — czyli coś, czego nie wolno oprzeć na zgadywaniu.
+   */
+  skladka: number;
 };
 
-function v(code: VariantCode, label: string): PolicyVariant {
-  return { code, label, templatePath: `templates/policies/${code}.docx` };
+function v(code: VariantCode, label: string, skladka: number): PolicyVariant {
+  return { code, label, skladka, templatePath: `templates/policies/${code}.docx` };
+}
+
+/**
+ * Warianty uporządkowane od najniższej składki do najwyższej.
+ *
+ * To jest kolejność, w jakiej wystawiają się polisy i w jakiej idą kolejne
+ * numery kont i polis. Wymóg InterRisk: numery mają rosnąć razem ze składką,
+ * bo tak są potem czytane i uzgadniane. Przy remisie decyduje kod wariantu,
+ * żeby przy dwóch polisach po 50 zł kolejność była zawsze ta sama, a nie
+ * zależna od tego, w którą kratkę operator kliknął pierwszy.
+ */
+export function wgSkladki(kody: VariantCode[]): VariantCode[] {
+  return [...kody].sort((a, b) => {
+    const roznica = POLICY_VARIANTS[a].skladka - POLICY_VARIANTS[b].skladka;
+    return roznica !== 0 ? roznica : a.localeCompare(b, "pl");
+  });
 }
 
 export const POLICY_VARIANTS: Record<VariantCode, PolicyVariant> = {
-  "120PLNV40": v("120PLNV40", "120 PLN V40"),
-  "50PLNV40": v("50PLNV40", "50 PLN V40"),
-  "80PLNV40": v("80PLNV40", "80 PLN V40"),
-  "165PLN": v("165PLN", "165 PLN"),
-  "65PLNV40": v("65PLNV40", "65 PLN V40"),
-  "90PLNV50": v("90PLNV50", "90 PLN V50"),
-  "85PLNV50": v("85PLNV50", "85 PLN V50"),
-  "50PLNV50": v("50PLNV50", "50 PLN V50"),
-  "65PLNV50": v("65PLNV50", "65 PLN V50"),
-  "125PLNV50": v("125PLNV50", "125 PLN V50"),
-  "140PLNV50": v("140PLNV50", "140 PLN V50"),
-  "170PLNV50": v("170PLNV50", "170 PLN V50"),
-  "195PLNV50": v("195PLNV50", "195 PLN V50"),
+  "120PLNV40": v("120PLNV40", "120 PLN V40", 120),
+  "50PLNV40": v("50PLNV40", "50 PLN V40", 50),
+  "80PLNV40": v("80PLNV40", "80 PLN V40", 80),
+  "165PLN": v("165PLN", "165 PLN", 165),
+  "65PLNV40": v("65PLNV40", "65 PLN V40", 65),
+  "90PLNV50": v("90PLNV50", "90 PLN V50", 90),
+  "85PLNV50": v("85PLNV50", "85 PLN V50", 85),
+  "50PLNV50": v("50PLNV50", "50 PLN V50", 50),
+  "65PLNV50": v("65PLNV50", "65 PLN V50", 65),
+  "125PLNV50": v("125PLNV50", "125 PLN V50", 125),
+  "140PLNV50": v("140PLNV50", "140 PLN V50", 140),
+  "170PLNV50": v("170PLNV50", "170 PLN V50", 170),
+  "195PLNV50": v("195PLNV50", "195 PLN V50", 195),
 };
 
 export const VARIANT_LIST: PolicyVariant[] = Object.values(POLICY_VARIANTS);

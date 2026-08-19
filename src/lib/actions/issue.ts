@@ -10,6 +10,7 @@ import {
   POLICY_VARIANTS,
   isVariantCode,
   policyNumberFromAccount,
+  wgSkladki,
   type VariantCode,
 } from "@/lib/interrisk/variants";
 import { buildFieldData, formatIssueDate, generatePolicyDocx } from "@/lib/interrisk/generate";
@@ -25,7 +26,12 @@ export type PreviewRow =
  */
 export async function previewAssignments(variantCodes: string[]): Promise<PreviewRow[]> {
   await requireUser();
-  const codes = [...new Set(variantCodes)].filter(isVariantCode);
+  // Kolejność od najniższej składki do najwyższej. Numery kont i polis są
+  // przydzielane po kolei z puli, więc to sortowanie decyduje o tym, czy numer
+  // rośnie razem ze składką - a tak są potem czytane i uzgadniane w InterRisk.
+  // Sortujemy TU I W generatePolicies tą samą funkcją, bo ekran podglądu musi
+  // pokazywać dokładnie te numery, które za chwilę zostaną wystawione.
+  const codes = wgSkladki([...new Set(variantCodes)].filter(isVariantCode));
   const rows: PreviewRow[] = [];
 
   try {
@@ -70,7 +76,8 @@ export async function generatePolicies(input: unknown): Promise<GenerateResult> 
   }
   const data = parsed.data;
 
-  const codes = [...new Set(data.variants)].filter(isVariantCode);
+  // Ta sama kolejność co na ekranie podglądu - patrz previewAssignments.
+  const codes = wgSkladki([...new Set(data.variants)].filter(isVariantCode));
   if (codes.length === 0) {
     return { error: "Nie wybrano poprawnych wariantów." };
   }
