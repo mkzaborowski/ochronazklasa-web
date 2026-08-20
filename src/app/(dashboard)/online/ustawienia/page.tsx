@@ -30,7 +30,12 @@ export default async function OnlineSettingsPage() {
     );
   }
 
-  const gotowe = stan.sprzedazOnline && stan.smtp.ok && !stan.umowaGrupowa.startsWith("[");
+  // Panel i API wdrażają się osobno. Przez te dwie minuty panel może rozmawiać
+  // ze starszym API, które jeszcze nie zna pola `warianty` - i to nie powód,
+  // żeby strona się wywracała.
+  const warianty = stan.warianty ?? [];
+  const bezNumeru = warianty.filter((w) => !w.numerPolisy?.trim());
+  const gotowe = stan.sprzedazOnline && stan.smtp.ok && bezNumeru.length === 0;
 
   return (
     <div className="space-y-6">
@@ -51,7 +56,7 @@ export default async function OnlineSettingsPage() {
         {gotowe ? (
           <>
             <strong>System gotowy do sprzedaży.</strong> Płatności produkcyjne, poczta działa,
-            umowa grupowa uzupełniona.
+            każdy wariant ma numer polisy grupowej.
           </>
         ) : (
           <>
@@ -97,18 +102,49 @@ export default async function OnlineSettingsPage() {
       </div>
 
       <div className="rounded-lg border bg-card p-5">
-        <h2 className="mb-3 text-sm font-semibold">Umowa grupowa i certyfikaty</h2>
-        <Pole
-          etykieta="Seria i numer umowy grupowej"
-          wartosc={
-            stan.umowaGrupowa.startsWith("[") ? (
-              <span className="text-amber-700">do uzupełnienia (od Kamili)</span>
-            ) : (
-              stan.umowaGrupowa
-            )
-          }
-        />
-        <Pole etykieta="Wystawione certyfikaty produkcyjne" wartosc={stan.wystawioneCertyfikaty} />
+        <h2 className="text-sm font-semibold">Polisy grupowe</h2>
+        <p className="mt-1 mb-3 text-xs text-muted-foreground">
+          Każdy wariant to osobna umowa z InterRisk. Numer z tego wiersza trafia na certyfikat
+          klienta, który kupił ten wariant. Rachunek służy wyłącznie do uzgodnień
+          z ubezpieczycielem — składkę pobiera Przelewy24.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm tabular-nums">
+            <thead>
+              <tr className="border-b text-left text-xs text-muted-foreground">
+                <th className="py-2 font-medium">Wariant</th>
+                <th className="py-2 font-medium">Polisa grupowa</th>
+                <th className="py-2 font-medium">Rachunek InterRisk</th>
+              </tr>
+            </thead>
+            <tbody>
+              {warianty.map((w) => (
+                <tr key={w.id} className="border-b last:border-b-0">
+                  <td className="py-2 whitespace-nowrap font-medium">{w.skladka} zł</td>
+                  <td className="py-2 whitespace-nowrap">
+                    {w.numerPolisy?.trim() ? (
+                      w.numerPolisy
+                    ) : (
+                      <span className="text-amber-700">brak numeru</span>
+                    )}
+                  </td>
+                  <td className="py-2 whitespace-nowrap text-muted-foreground">
+                    {w.numerKonta || "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {warianty.length === 0 ? (
+            <p className="py-3 text-sm text-muted-foreground">
+              Usługa sprzedaży nie podała numerów polis — najpewniej działa jeszcze starsza
+              wersja API.
+            </p>
+          ) : null}
+        </div>
+        <div className="mt-3 border-t pt-3">
+          <Pole etykieta="Wystawione certyfikaty produkcyjne" wartosc={stan.wystawioneCertyfikaty} />
+        </div>
       </div>
     </div>
   );

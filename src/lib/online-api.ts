@@ -84,11 +84,22 @@ export interface WniosekPelny extends WniosekSkrot {
   apkZaliczona: boolean;
 }
 
+/**
+ * Polisa grupowa jednego wariantu. Każdy wariant to osobna umowa z InterRisk,
+ * więc numer na certyfikacie zależy od tego, co klient kupił.
+ */
+export interface PolisaWariantu {
+  id: string;
+  skladka: number;
+  numerPolisy: string;
+  numerKonta: string;
+}
+
 export interface StanSystemu {
   trybPlatnosci: "mock" | "p24";
   p24Sandbox: boolean;
   smtp: { ok: boolean; komunikat: string };
-  umowaGrupowa: string;
+  warianty: PolisaWariantu[];
   wystawioneCertyfikaty: number;
   sprzedazOnline: boolean;
 }
