@@ -60,9 +60,26 @@ export default async function OnlineSettingsPage() {
           </>
         ) : (
           <>
-            <strong>Sprzedaż jeszcze nie ruszyła.</strong> Poniżej widać, czego brakuje. Zmiany
-            wprowadza się w pliku <code>/opt/ozk-api/.env</code> na serwerze, po czym{" "}
-            <code>bosman restart ozk-api</code>.
+            <strong>Sprzedaż jeszcze nie ruszyła.</strong> Brakuje:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {!stan.sprzedazOnline ? (
+                <li>
+                  prawdziwych płatności — <code>PAYMENTS_MODE=p24</code> w{" "}
+                  <code>/opt/ozk-api/.env</code>
+                </li>
+              ) : null}
+              {!stan.smtp.ok ? <li>działającej wysyłki certyfikatów (patrz karta „Poczta”)</li> : null}
+              {bezNumeru.length ? (
+                <li>
+                  numerów polis grupowych dla wariantów:{" "}
+                  {bezNumeru.map((w) => `${w.skladka} zł`).join(", ")} — numery żyją przy
+                  wariantach w kodzie API (<code>src/types.ts</code>), nie w <code>.env</code>
+                </li>
+              ) : null}
+            </ul>
+            <p className="mt-2">
+              Po zmianach w <code>.env</code>: <code>bosman restart ozk-api</code>.
+            </p>
           </>
         )}
       </div>
@@ -85,7 +102,7 @@ export default async function OnlineSettingsPage() {
         </div>
 
         <div className="rounded-lg border bg-card p-5">
-          <h2 className="mb-3 text-sm font-semibold">Poczta (certyfikaty do klientów)</h2>
+          <h2 className="mb-3 text-sm font-semibold">Wysyłka certyfikatów</h2>
           <Pole etykieta="Stan" wartosc={stan.smtp.ok ? "działa" : "nieskonfigurowana"} />
           <p
             className={`mt-3 text-xs ${stan.smtp.ok ? "text-emerald-700" : "text-red-700"}`}
@@ -94,8 +111,10 @@ export default async function OnlineSettingsPage() {
           </p>
           {!stan.smtp.ok && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Do uruchomienia: <code>SMTP_HOST</code>, <code>SMTP_PORT</code>,{" "}
-              <code>SMTP_USER</code>, <code>SMTP_PASS</code>.
+              Produkcyjnie certyfikaty idą przez usługę pocztową (
+              <code>POCZTA_KLUCZ</code>) — SMTP jest tylko drogą zapasową (
+              <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>,{" "}
+              <code>SMTP_PASS</code>).
             </p>
           )}
         </div>
