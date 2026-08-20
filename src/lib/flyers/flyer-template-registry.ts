@@ -1,20 +1,26 @@
 import type { VariantCode } from "@/lib/interrisk/variants";
-import type { FlyerTemplate, PaymentType, PeriodKey } from "./flyer-types";
+import type { FlyerPeriod, FlyerTemplate, PaymentType, PeriodKey } from "./flyer-types";
 
 /**
- * Registry of the AVAILABLE ulotka templates — only these premade combinations
- * work. A flyer = payment type (cash/wire) × period (1 rok / 2 lata) × an exact
- * variant combination. Files + field maps live in templates/flyers/ and are
- * produced by `npm run build-flyer-fields`.
+ * Spis DOSTĘPNYCH ulotek — działają wyłącznie te przygotowane wcześniej
+ * kombinacje. Ulotka = forma płatności (gotówka/przelew) × okres × dokładny
+ * zestaw wariantów. Pliki i mapy pól leżą w templates/flyers/ i powstają
+ * przez `npm run build-flyer-fields`.
  *
- * TODO: add new entries here (and in scripts/extract-flyer-fields.mjs MAP) as
- * more flyer PDFs are delivered.
+ * Nową ulotkę dodaje się w trzech krokach: plik do
+ * templates/flyers/<klucz>.pdf, wpis w MAP w scripts/extract-flyer-fields.mjs,
+ * wpis tutaj.
+ *
+ * O OKRESIE decyduje druga strona ulotki (tabela zakresu), a nie wpisana w
+ * dostarczonym pliku data — to pole i tak nadpisujemy przy generowaniu.
+ * Ulotka z dwoma wierszami świadczenia za 1% (osobno „umowa na 1 rok" i
+ * „umowa na 2 lata") obsługuje oba okresy i ma tu okres "ANY".
  */
 function tpl(
   key: string,
   label: string,
   payment: PaymentType,
-  period: PeriodKey,
+  period: FlyerPeriod,
   variants: VariantCode[],
   fileKey = key,
 ): FlyerTemplate {
@@ -53,6 +59,23 @@ export const FLYER_TEMPLATES: FlyerTemplate[] = [
     ["65PLNV50", "85PLNV50", "125PLNV50"]),
   tpl("v50-65-90-140-cash-2y", "OCHRONA 65/90/140 — gotówka, 2 lata", "cash", "2Y",
     ["65PLNV50", "90PLNV50", "140PLNV50"]),
+
+  // --- dostarczone 20.08.2026 ---
+  tpl("v50-50-wire-2y", "OCHRONA 50 — przelew, 2 lata", "wire", "2Y", ["50PLNV50"]),
+  tpl("v50-50-65-cash-2y", "OCHRONA 50/65 — gotówka, 2 lata", "cash", "2Y",
+    ["50PLNV50", "65PLNV50"]),
+  tpl("v50-50-65-85-125-170-wire-2y", "OCHRONA 50/65/85/125/170 — przelew, 2 lata", "wire", "2Y",
+    ["50PLNV50", "65PLNV50", "85PLNV50", "125PLNV50", "170PLNV50"]),
+  tpl("v50-50-90-cash-any", "OCHRONA 50/90 — gotówka, 1 rok i 2 lata", "cash", "ANY",
+    ["50PLNV50", "90PLNV50"]),
+  tpl("v50-50-85-wire-any", "OCHRONA 50/85 — przelew, 1 rok i 2 lata", "wire", "ANY",
+    ["50PLNV50", "85PLNV50"]),
+  tpl("v50-50-65-85-125-cash-any", "OCHRONA 50/65/85/125 — gotówka, 1 rok i 2 lata", "cash", "ANY",
+    ["50PLNV50", "65PLNV50", "85PLNV50", "125PLNV50"]),
+  tpl("v50-50-65-85-wire-any", "OCHRONA 50/65/85 — przelew, 1 rok i 2 lata", "wire", "ANY",
+    ["50PLNV50", "65PLNV50", "85PLNV50"]),
+  tpl("v50-65-85-125-170-wire-any", "OCHRONA 65/85/125/170 — przelew, 1 rok i 2 lata", "wire", "ANY",
+    ["65PLNV50", "85PLNV50", "125PLNV50", "170PLNV50"]),
 ];
 
 /** Canonical order-independent key for a set of variants. */
@@ -60,28 +83,38 @@ export function combinationKey(variants: VariantCode[]): string {
   return [...new Set(variants)].sort().join("+");
 }
 
-/** The flyer for an exact combination + payment + period, or null. */
+/** Czy ulotka nadaje się na polisę o tym okresie. */
+function pasujeOkresem(t: FlyerTemplate, period: PeriodKey): boolean {
+  return t.period === period || t.period === "ANY";
+}
+
+/**
+ * Ulotka na dokładnie ten zestaw wariantów + formę płatności + okres.
+ *
+ * Ulotka przypisana wprost do okresu wygrywa z uniwersalną: drukuje tylko ten
+ * wiersz świadczeń, który dotyczy tej szkoły, więc rodzic nie musi zgadywać,
+ * którą liczbę czytać.
+ */
 export function selectFlyerTemplate(
   variants: VariantCode[],
   payment: PaymentType,
   period: PeriodKey,
 ): FlyerTemplate | null {
   const key = combinationKey(variants);
-  return (
-    FLYER_TEMPLATES.find(
-      (t) => t.payment === payment && t.period === period && combinationKey(t.variants) === key,
-    ) ?? null
+  const kandydaci = FLYER_TEMPLATES.filter(
+    (t) => t.payment === payment && combinationKey(t.variants) === key && pasujeOkresem(t, period),
   );
+  return kandydaci.find((t) => t.period === period) ?? kandydaci[0] ?? null;
 }
 
-/** Which flyers (payment options) exist for this combination + period. */
+/** Które ulotki (formy płatności) istnieją dla tego zestawu i okresu. */
 export function availableFlyersForCombination(
   variants: VariantCode[],
   period: PeriodKey,
 ): FlyerTemplate[] {
   const key = combinationKey(variants);
   return FLYER_TEMPLATES.filter(
-    (t) => t.period === period && combinationKey(t.variants) === key,
+    (t) => pasujeOkresem(t, period) && combinationKey(t.variants) === key,
   );
 }
 

@@ -1,7 +1,18 @@
 import type { VariantCode } from "@/lib/interrisk/variants";
 
 export type PaymentType = "cash" | "wire";
+
+/** Okres polisy szkoły — zawsze konkretny. */
 export type PeriodKey = "1Y" | "2Y";
+
+/**
+ * Okres, który obsługuje ULOTKA. Poza "1Y" i "2Y" jest "ANY": część ulotek
+ * drukuje świadczenie za 1% w dwóch wierszach — osobno dla umowy rocznej
+ * i dwuletniej — więc jedna sztuka obsługuje oba okresy. Rozdzielone od
+ * PeriodKey celowo: pytanie „na ile lat jest polisa" ma zawsze odpowiedź
+ * 1 albo 2, a „ANY" jest cechą wydruku, nie umowy.
+ */
+export type FlyerPeriod = PeriodKey | "ANY";
 export type FlyerTemplateKey = string;
 
 export type FlyerFieldRole =
@@ -25,7 +36,7 @@ export type FlyerFieldDef = {
 /** Parsed `<key>.fields.json` (v2) produced by scripts/extract-flyer-fields. */
 export type FlyerFields = {
   payment: PaymentType;
-  period: PeriodKey;
+  period: FlyerPeriod;
   variants: VariantCode[];
   fields: FlyerFieldDef[];
 };
@@ -34,7 +45,7 @@ export type FlyerTemplate = {
   key: FlyerTemplateKey;
   label: string;
   payment: PaymentType;
-  period: PeriodKey;
+  period: FlyerPeriod;
   variants: VariantCode[]; // the exact combination this flyer covers
   templatePath: string;
   fieldsPath: string;

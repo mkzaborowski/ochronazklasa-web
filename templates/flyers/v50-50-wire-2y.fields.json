@@ -2,10 +2,7 @@
   "payment": "wire",
   "period": "2Y",
   "variants": [
-    "65PLNV50",
-    "90PLNV50",
-    "140PLNV50",
-    "195PLNV50"
+    "50PLNV50"
   ],
   "fields": [
     {
@@ -31,18 +28,6 @@
       "prefixAA": true
     },
     {
-      "name": "Text7",
-      "role": "policy",
-      "idx": 1,
-      "prefixAA": true
-    },
-    {
-      "name": "Text8",
-      "role": "policy",
-      "idx": 2,
-      "prefixAA": true
-    },
-    {
       "name": "Text1",
       "role": "school"
     },
@@ -54,27 +39,6 @@
       "name": "Text10",
       "role": "account",
       "idx": 0
-    },
-    {
-      "name": "Text13",
-      "role": "account",
-      "idx": 1
-    },
-    {
-      "name": "Text14",
-      "role": "account",
-      "idx": 2
-    },
-    {
-      "name": "Text16",
-      "role": "policy",
-      "idx": 3,
-      "prefixAA": true
-    },
-    {
-      "name": "Text20",
-      "role": "account",
-      "idx": 3
     }
   ]
 }

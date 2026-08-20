@@ -1,0 +1,92 @@
+{
+  "payment": "wire",
+  "period": "2Y",
+  "variants": [
+    "50PLNV50",
+    "65PLNV50",
+    "85PLNV50",
+    "125PLNV50",
+    "170PLNV50"
+  ],
+  "fields": [
+    {
+      "name": "Text1",
+      "role": "school"
+    },
+    {
+      "name": "Text2",
+      "role": "period"
+    },
+    {
+      "name": "Text5",
+      "role": "policy",
+      "idx": 0,
+      "prefixAA": true
+    },
+    {
+      "name": "Text10",
+      "role": "account",
+      "idx": 0
+    },
+    {
+      "name": "Text7",
+      "role": "policy",
+      "idx": 1,
+      "prefixAA": true
+    },
+    {
+      "name": "Text13",
+      "role": "account",
+      "idx": 1
+    },
+    {
+      "name": "Text8",
+      "role": "policy",
+      "idx": 2,
+      "prefixAA": true
+    },
+    {
+      "name": "Text14",
+      "role": "account",
+      "idx": 2
+    },
+    {
+      "name": "Text16",
+      "role": "policy",
+      "idx": 3,
+      "prefixAA": true
+    },
+    {
+      "name": "Text20",
+      "role": "account",
+      "idx": 3
+    },
+    {
+      "name": "Text11",
+      "role": "policy",
+      "idx": 4,
+      "prefixAA": true
+    },
+    {
+      "name": "Text22",
+      "role": "account",
+      "idx": 4
+    },
+    {
+      "name": "Text17",
+      "role": "deadline"
+    },
+    {
+      "name": "Text18",
+      "role": "opiekunName"
+    },
+    {
+      "name": "Text19",
+      "role": "opiekunPhone"
+    },
+    {
+      "name": "Text21",
+      "role": "opiekunEmail"
+    }
+  ]
+}

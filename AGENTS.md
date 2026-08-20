@@ -33,6 +33,12 @@ pdf-lib / docxtemplater / exceljs.
 - `npm run build` — must stay green (type-check runs here).
 - `npm run db:push` / `db:migrate` / `db:studio` — Prisma.
 
+## Flyers (ulotki)
+Premade PDFs with AcroForm fields; a flyer covers one exact variant set ×
+payment × period. They arrive **pre-filled with someone else's data**, so an
+unmapped field prints that data on every school's flyer — `npm run check:ulotki`
+guards this and runs in CI. How to add one: `docs/ulotki.md`.
+
 ## Sales attribution
 Online sales carry an **agent code**, not an agent id — the sales DB is a
 separate service. Rules and the reasoning behind them: `docs/linki-polecajace.md`.

@@ -29,6 +29,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check:numeracja
+      - run: npm run check:ulotki
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:

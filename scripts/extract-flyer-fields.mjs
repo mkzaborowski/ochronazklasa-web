@@ -1,73 +1,83 @@
-// Analyze ulotka PDFs: copy each into templates/flyers/<key>.pdf and emit
-// <key>.fields.json v2 — an explicit AcroForm field→role map computed offline:
+// Buduje mapę pól AcroForm dla ulotek: dla każdego klucza z MAP czyta
+// templates/flyers/<key>.pdf i zapisuje obok <key>.fields.json v2 —
 //   { payment, period, variants, fields: [{ name, role, idx?, prefixAA? }] }
-// Roles: policy(idx) | account(idx) | school | period | opiekunName |
-//        opiekunPhone | opiekunEmail | deadline(skip at runtime)
+// Role: policy(idx) | account(idx) | school | period | opiekunName |
+//       opiekunPhone | opiekunEmail | deadline (pomijane przy generowaniu)
 //
-// Classification = field value hints + geometry + page-text labels (pdftotext
-// -bbox), because some delivered templates have EMPTY form fields.
-// Run: node scripts/extract-flyer-fields.mjs
+// ŹRÓDŁEM SĄ PLIKI W REPOZYTORIUM, nie katalog Pobrane. Wcześniej skrypt
+// czytał ulotki z ~/Downloads i na starcie kasował cały katalog wyjściowy —
+// uruchomienie go na komputerze bez tamtych plików kasowało szablony, których
+// nie było już z czego odtworzyć. Teraz nową ulotkę wgrywa się raz do
+// templates/flyers/<key>.pdf, a skrypt jest idempotentny.
+//
+// Uruchomienie: node scripts/extract-flyer-fields.mjs [--only <key>]
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
-import os from "node:os";
-import PizZip from "pizzip";
 import { PDFDocument } from "pdf-lib";
 
-const DL = path.join(os.homedir(), "Downloads");
-const NEW = path.join(DL, "programdopolisulepszenianadzie9_07");
 const OUT = path.join(process.cwd(), "templates", "flyers");
 
 const V50_FULL = ["50PLNV50", "65PLNV50", "90PLNV50", "140PLNV50", "195PLNV50"];
 
-// key -> { src, payment, period, variants (flyer row order, top→bottom) }
+// key -> { payment, period, variants (kolejność wierszy na ulotce, góra→dół) }
+//
+// period: "1Y" | "2Y" | "ANY". ANY = ulotka drukuje świadczenie za 1% w dwóch
+// wierszach, osobno dla umowy rocznej i dwuletniej, więc pasuje do obu okresów.
+// O okresie decyduje DRUGA STRONA (tabela zakresu), a nie wypełnione pole
+// „okres ubezpieczenia" na pierwszej — to pole i tak nadpisujemy przy
+// generowaniu.
 const MAP = {
-  "v50-full-cash-2y": {
-    src: path.join(DL, "PŁATNOŚĆ GOTÓWKA SP 3 BRANIEWO IR OCHRONA 2026 50 65 90 140 195 (1).pdf"),
-    payment: "cash", period: "2Y", variants: V50_FULL,
-  },
-  "v50-full-wire-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ PRZELEW IR OCHRONA 50 65 90 140 195 2 LATA.pdf"),
-    payment: "wire", period: "2Y", variants: V50_FULL,
-  },
+  "v50-full-cash-2y": { payment: "cash", period: "2Y", variants: V50_FULL },
+  "v50-full-wire-2y": { payment: "wire", period: "2Y", variants: V50_FULL },
   "v50-65-90-140-195-wire-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ PRZELEW IR OCHRONA 65 90 140 195 2 LATA.pdf"),
     payment: "wire", period: "2Y", variants: ["65PLNV50", "90PLNV50", "140PLNV50", "195PLNV50"],
   },
   "v50-50-90-140-195-wire-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ PRZELEW IR OCHRONA 50 90 140 195 2 LATA.pdf"),
     payment: "wire", period: "2Y", variants: ["50PLNV50", "90PLNV50", "140PLNV50", "195PLNV50"],
   },
-  "v50-50-cash-1y": {
-    src: path.join(NEW, "PŁATNOŚĆ GOTÓWKA IR O 50ZŁ 1 ROK.pdf"),
-    payment: "cash", period: "1Y", variants: ["50PLNV50"],
-  },
-  "v50-50-cash-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ GOTÓWKA IR O 50ZŁ 2 LATA.pdf"),
-    payment: "cash", period: "2Y", variants: ["50PLNV50"],
-  },
-  "v65-single-cash-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ GOTÓWKA IR 2026  65 2 LATA.pdf"),
-    payment: "cash", period: "2Y", variants: ["65PLNV50"], // registry also maps 65PLNV40
-  },
+  "v50-50-cash-1y": { payment: "cash", period: "1Y", variants: ["50PLNV50"] },
+  "v50-50-cash-2y": { payment: "cash", period: "2Y", variants: ["50PLNV50"] },
+  // rejestr mapuje ten sam plik również na 65PLNV40
+  "v65-single-cash-2y": { payment: "cash", period: "2Y", variants: ["65PLNV50"] },
   "v40-50-80-120-165-cash-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ GOTÓWKA IR 2026 OCHRONA 50 80 120 165 2 lata.pdf"),
     payment: "cash", period: "2Y", variants: ["50PLNV40", "80PLNV40", "120PLNV40", "165PLN"],
   },
   "v50-50-90-140-195-cash-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ GOTÓWKA IR 2026 OCHRONA 50 90 140 195 2 LATA.pdf"),
     payment: "cash", period: "2Y", variants: ["50PLNV50", "90PLNV50", "140PLNV50", "195PLNV50"],
   },
   "v50-65-85-125-cash-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ GOTÓWKA IR 2026 OCHRONA 65 85 125 2 LATA.pdf"),
     payment: "cash", period: "2Y", variants: ["65PLNV50", "85PLNV50", "125PLNV50"],
   },
   "v50-65-90-140-cash-2y": {
-    src: path.join(NEW, "PŁATNOŚĆ GOTÓWKA IR 2026 OCHRONA 65 90 140 2 LATA.pdf"),
     payment: "cash", period: "2Y", variants: ["65PLNV50", "90PLNV50", "140PLNV50"],
   },
+
+  // --- dostarczone 20.08.2026 ---
+  "v50-50-wire-2y": { payment: "wire", period: "2Y", variants: ["50PLNV50"] },
+  "v50-50-65-cash-2y": { payment: "cash", period: "2Y", variants: ["50PLNV50", "65PLNV50"] },
+  "v50-50-65-85-125-170-wire-2y": {
+    payment: "wire", period: "2Y",
+    variants: ["50PLNV50", "65PLNV50", "85PLNV50", "125PLNV50", "170PLNV50"],
+  },
+  "v50-50-90-cash-any": { payment: "cash", period: "ANY", variants: ["50PLNV50", "90PLNV50"] },
+  "v50-50-85-wire-any": { payment: "wire", period: "ANY", variants: ["50PLNV50", "85PLNV50"] },
+  "v50-50-65-85-125-cash-any": {
+    payment: "cash", period: "ANY",
+    variants: ["50PLNV50", "65PLNV50", "85PLNV50", "125PLNV50"],
+  },
+  "v50-50-65-85-wire-any": {
+    payment: "wire", period: "ANY", variants: ["50PLNV50", "65PLNV50", "85PLNV50"],
+  },
+  "v50-65-85-125-170-wire-any": {
+    payment: "wire", period: "ANY",
+    variants: ["65PLNV50", "85PLNV50", "125PLNV50", "170PLNV50"],
+  },
 };
+
+/** Etykieta składki na ulotce: „50 zł", „125 PLN". Zostaje jak jest. */
+const SKLADKA = /^\d{2,3}\s*(zł|PLN)$/i;
 
 function pageWords(file) {
   const xml = execFileSync("pdftotext", ["-bbox", "-f", "1", "-l", "1", file, "-"], {
@@ -82,8 +92,13 @@ function pageWords(file) {
 }
 
 async function classify(key, cfg) {
-  const { pageH, ws } = pageWords(cfg.src);
-  const pdf = await PDFDocument.load(readFileSync(cfg.src));
+  const src = path.join(OUT, `${key}.pdf`);
+  if (!existsSync(src)) {
+    console.log(`${key.padEnd(30)} ✗  brak pliku ${path.relative(process.cwd(), src)}`);
+    return false;
+  }
+  const { pageH, ws } = pageWords(src);
+  const pdf = await PDFDocument.load(readFileSync(src));
   const tf = pdf.getForm().getFields().filter((f) => f.constructor.name === "PDFTextField");
 
   const F = tf.map((f) => {
@@ -121,24 +136,25 @@ async function classify(key, cfg) {
     else if (f.top < pageH * 0.7 && wordNear(f, /^POLISY/i, 220) && wordNear(f, /^NUMER/i, 340))
       f.role = "policy"; // "NUMER POLISY ____" (blank single-variant forms)
   }
-  // 3) wire rows hold TWO fields (policy | account): split row groups by x.
+  // 3) Ulotka przelewowa: wiersz to trzy pola obok siebie —
+  //      [ "50 zł" (etykieta składki) | numer polisy | numer rachunku ]
+  //
+  //    Zaczepiamy się o ETYKIETĘ SKŁADKI, bo to jedyne pole w wierszu, które
+  //    zawsze ma wartość. Wcześniej wiersze wychodziły z pól rozpoznanych jako
+  //    „polisa", a te rozpoznawało sąsiedztwo napisu na stronie — działało
+  //    tylko dla ulotek dostarczonych z wpisanym „A-A" w polu. W ulotkach z
+  //    pustymi polami jeden wiersz na komplet gubił rachunek, czyli rodzic
+  //    dostawał ulotkę bez numeru konta, na które ma zapłacić.
   if (cfg.payment === "wire") {
-    const rows = [];
-    for (const f of F.filter((x) => x.role === "policy").sort((a, b) => a.top - b.top)) {
-      const row = rows.find((r) => Math.abs(r[0].top - f.top) < 5);
-      if (row) row.push(f);
-      else rows.push([f]);
+    for (const f of F) {
+      if (f.role === "policy" || f.role === "account") { f.role = null; f.prefixAA = undefined; }
     }
-    for (const row of rows) {
-      row.sort((a, b) => a.x - b.x);
-      row.forEach((f, i) => (f.role = i === 0 ? "policy" : i === 1 ? "account" : null));
-    }
-    // any leftover unclassified wide field on a policy row -> account
-    for (const p of F.filter((f) => f.role === "policy")) {
-      if (F.some((f) => f.role === "account" && sameRow(p, f.top, f.top + f.h))) continue;
-      const cand = F.filter((f) => !f.role && f.x > p.x && sameRow(p, f.top, f.top + f.h))
-        .sort((a, b) => a.x - b.x)[0];
-      if (cand) cand.role = "account";
+    for (const etykieta of F.filter((f) => SKLADKA.test(f.v)).sort((a, b) => a.top - b.top)) {
+      const wiersz = F.filter(
+        (f) => f !== etykieta && !f.role && f.x > etykieta.x && Math.abs(f.top - etykieta.top) <= 6,
+      ).sort((a, b) => a.x - b.x);
+      if (wiersz[0]) wiersz[0].role = "policy";
+      if (wiersz[1]) wiersz[1].role = "account";
     }
   }
   // 4) bottom band -> opiekun name/phone/email (top→bottom order)
@@ -168,7 +184,14 @@ async function classify(key, cfg) {
   if (cfg.payment === "wire" && acc.length !== cfg.variants.length)
     problems.push(`account fields ${acc.length} != variants ${cfg.variants.length}`);
   for (const r of ["opiekunName", "opiekunPhone", "opiekunEmail", "period"])
-    if (!F.some((f) => f.role === r)) problems.push(`missing ${r}`);
+    if (!F.some((f) => f.role === r)) problems.push(`brak roli ${r}`);
+  // NAJWAŻNIEJSZE: pole z wartością, któremu nie nadano roli, NIE JEST
+  // nadpisywane przy generowaniu - czyli wydrukuje się tak, jak przyszło od
+  // dostawcy. Ulotki przychodzą wypełnione przykładem (nazwa szkoły, opiekun,
+  // numery polis), więc przeoczona rola oznacza cudze nazwisko i cudzy numer
+  // polisy na ulotce każdej szkoły. Etykiety składek zostają celowo.
+  const przecieki = F.filter((f) => !f.role && f.v && !SKLADKA.test(f.v));
+  for (const f of przecieki) problems.push(`nieprzypisane pole z wartością ${f.name}=${JSON.stringify(f.v)}`);
 
   const json = {
     payment: cfg.payment,
@@ -178,7 +201,6 @@ async function classify(key, cfg) {
       name, role, ...(idx !== undefined ? { idx } : {}), ...(prefixAA !== undefined ? { prefixAA } : {}),
     })),
   };
-  copyFileSync(cfg.src, path.join(OUT, `${key}.pdf`));
   writeFileSync(path.join(OUT, `${key}.fields.json`), JSON.stringify(json, null, 2));
   const st = problems.length ? `⚠ ${problems.join("; ")}` : "✓";
   console.log(
@@ -187,12 +209,23 @@ async function classify(key, cfg) {
   return problems.length === 0;
 }
 
-rmSync(OUT, { recursive: true, force: true });
-mkdirSync(OUT, { recursive: true });
+// --only <key> przebudowuje jedną ulotkę; bez tego wszystkie z MAP.
+const tylko = process.argv.includes("--only")
+  ? process.argv[process.argv.indexOf("--only") + 1]
+  : null;
+if (tylko && !MAP[tylko]) {
+  console.error(`Nieznany klucz: ${tylko}. Dostępne: ${Object.keys(MAP).join(", ")}`);
+  process.exit(1);
+}
+
 let ok = true;
-for (const [key, cfg] of Object.entries(MAP)) ok = (await classify(key, cfg)) && ok;
+for (const [key, cfg] of Object.entries(MAP)) {
+  if (tylko && key !== tylko) continue;
+  ok = (await classify(key, cfg)) && ok;
+}
 writeFileSync(
   path.join(OUT, "README.md"),
-  "# Ulotki (flyer templates)\n\nGenerated by scripts/extract-flyer-fields.mjs — <key>.pdf + <key>.fields.json\n(field→role map). Registered in src/lib/flyers/flyer-template-registry.ts.\n",
+  "# Ulotki (szablony)\n\n<key>.pdf wgrywa się tu ręcznie; <key>.fields.json (mapa pole→rola)\ngeneruje `npm run build-flyer-fields` NA PODSTAWIE tych plików PDF.\nKlucze rejestruje src/lib/flyers/flyer-template-registry.ts.\n",
 );
-console.log(ok ? "\nALL OK" : "\nSOME PROBLEMS — inspect above");
+console.log(ok ? "\nWSZYSTKO OK" : "\nSĄ PROBLEMY — patrz wyżej");
+process.exit(ok ? 0 : 1);

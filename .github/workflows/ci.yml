@@ -19,6 +19,10 @@ jobs:
       # Stopki polis: liczba stron ma być liczona polem NUMPAGES.
       # Szablony przychodzą od InterRisk z liczbą wpisaną na sztywno.
       - run: npm run check:numeracja
+      # Ulotki przychodzą od dostawcy WYPEŁNIONE przykładem. Pole, któremu przy
+      # budowie mapy nie nadano roli, nie jest nadpisywane - i cudza szkoła albo
+      # cudzy opiekun jedzie na ulotce każdej placówki.
+      - run: npm run check:ulotki
       - run: npm run lint
       - run: npm run build
         env:

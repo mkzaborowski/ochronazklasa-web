@@ -53,20 +53,17 @@
     {
       "name": "Text10",
       "role": "account",
-      "idx": 0,
-      "prefixAA": false
+      "idx": 0
     },
     {
       "name": "Text13",
       "role": "account",
-      "idx": 1,
-      "prefixAA": false
+      "idx": 1
     },
     {
       "name": "Text14",
       "role": "account",
-      "idx": 2,
-      "prefixAA": false
+      "idx": 2
     },
     {
       "name": "Text16",
@@ -77,8 +74,7 @@
     {
       "name": "Text20",
       "role": "account",
-      "idx": 3,
-      "prefixAA": false
+      "idx": 3
     }
   ]
 }

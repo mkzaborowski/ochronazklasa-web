@@ -19,6 +19,8 @@
     "build-flyer-fields": "node scripts/extract-flyer-fields.mjs",
     "postinstall": "prisma generate",
     "check:numeracja": "node scripts/sprawdz-numeracje-stron.mjs",
+    "check:ulotki": "node scripts/sprawdz-ulotki.mjs",
+    "fix-flyer-duplicates": "node scripts/napraw-zdublowane-pola.mjs",
     "agenci:kody": "node --env-file=.env scripts/nadaj-kody-agentom.mjs"
   },
   "dependencies": {
