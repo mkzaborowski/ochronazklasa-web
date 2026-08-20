@@ -93,6 +93,10 @@ export interface PolisaWariantu {
   skladka: number;
   numerPolisy: string;
   numerKonta: string;
+  /** jak wygląda numer certyfikatu wystawionego na tę polisę */
+  wzorNumeru: string;
+  /** ile certyfikatów wystawiono na tę polisę w tym roku */
+  wystawionych: number;
 }
 
 export interface StanSystemu {

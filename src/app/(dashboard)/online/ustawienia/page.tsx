@@ -123,8 +123,9 @@ export default async function OnlineSettingsPage() {
       <div className="rounded-lg border bg-card p-5">
         <h2 className="text-sm font-semibold">Polisy grupowe</h2>
         <p className="mt-1 mb-3 text-xs text-muted-foreground">
-          Każdy wariant to osobna umowa z InterRisk. Numer z tego wiersza trafia na certyfikat
-          klienta, który kupił ten wariant. Rachunek służy wyłącznie do uzgodnień
+          Każdy wariant to osobna umowa z InterRisk. Numer polisy trafia na certyfikat klienta —
+          i do samego numeru certyfikatu, żeby klient miał go od razu, bez szukania w rubryce.
+          Numeracja biegnie osobno dla każdej polisy. Rachunek służy wyłącznie do uzgodnień
           z ubezpieczycielem — składkę pobiera Przelewy24.
         </p>
         <div className="overflow-x-auto">
@@ -133,6 +134,8 @@ export default async function OnlineSettingsPage() {
               <tr className="border-b text-left text-xs text-muted-foreground">
                 <th className="py-2 font-medium">Wariant</th>
                 <th className="py-2 font-medium">Polisa grupowa</th>
+                <th className="py-2 font-medium">Numer certyfikatu</th>
+                <th className="py-2 text-right font-medium">Wystawione</th>
                 <th className="py-2 font-medium">Rachunek InterRisk</th>
               </tr>
             </thead>
@@ -147,6 +150,10 @@ export default async function OnlineSettingsPage() {
                       <span className="text-amber-700">brak numeru</span>
                     )}
                   </td>
+                  <td className="py-2 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                    {w.wzorNumeru ?? "—"}
+                  </td>
+                  <td className="py-2 text-right whitespace-nowrap">{w.wystawionych ?? 0}</td>
                   <td className="py-2 whitespace-nowrap text-muted-foreground">
                     {w.numerKonta || "—"}
                   </td>
@@ -162,7 +169,7 @@ export default async function OnlineSettingsPage() {
           ) : null}
         </div>
         <div className="mt-3 border-t pt-3">
-          <Pole etykieta="Wystawione certyfikaty produkcyjne" wartosc={stan.wystawioneCertyfikaty} />
+          <Pole etykieta="Wystawione certyfikaty produkcyjne (łącznie)" wartosc={stan.wystawioneCertyfikaty} />
         </div>
       </div>
     </div>
