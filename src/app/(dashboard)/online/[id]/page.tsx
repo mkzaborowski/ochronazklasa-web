@@ -143,7 +143,6 @@ export default async function OnlineApplicationPage({
               <TableHead>Lp</TableHead>
               <TableHead>Imię i nazwisko</TableHead>
               <TableHead>PESEL / data ur.</TableHead>
-              <TableHead>Placówka</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -154,11 +153,6 @@ export default async function OnlineApplicationPage({
                   {u.imie} {u.nazwisko}
                 </TableCell>
                 <TableCell>{ident(u.identyfikacja)}</TableCell>
-                <TableCell>
-                  {u.nazwaPlacowki}
-                  {u.nrPlacowki && u.nrPlacowki !== "-" ? ` nr ${u.nrPlacowki}` : ""},{" "}
-                  {u.miejscowoscPlacowki}
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>

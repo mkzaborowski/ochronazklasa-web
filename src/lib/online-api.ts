@@ -23,7 +23,7 @@ export interface WniosekSkrot {
   dataStartu: string;
   koniecOchrony: string;
   oplacajacy: { imie: string; nazwisko: string; email: string; telefon: string };
-  ubezpieczeni: { imie: string; nazwisko: string; placowka: string }[];
+  ubezpieczeni: { imie: string; nazwisko: string }[];
   /** kod z linku polecającego; null = zakup bez rekomendacji */
   kodAgenta: string | null;
   blad: string | null;
@@ -75,9 +75,6 @@ export interface WniosekPelny extends WniosekSkrot {
   ubezpieczeniPelni: {
     imie: string;
     nazwisko: string;
-    nazwaPlacowki: string;
-    nrPlacowki: string;
-    miejscowoscPlacowki: string;
     identyfikacja: { typ: string; pesel: string; dataUrodzenia: string };
   }[];
   zgody: Record<string, boolean>;
