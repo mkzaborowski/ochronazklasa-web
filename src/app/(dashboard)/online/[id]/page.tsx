@@ -76,7 +76,16 @@ export default async function OnlineApplicationPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg border bg-card p-5">
           <h2 className="mb-3 text-sm font-semibold">Ubezpieczenie</h2>
-          <Pole etykieta="Numer certyfikatu" wartosc={w.numerCertyfikatu ?? "—"} />
+          <Pole
+            etykieta={
+              (w.numerCertyfikatu ?? "").includes(", ") ? "Numery certyfikatów" : "Numer certyfikatu"
+            }
+            wartosc={
+              w.numerCertyfikatu
+                ? w.numerCertyfikatu.split(", ").map((n) => <div key={n}>{n}</div>)
+                : "—"
+            }
+          />
           <Pole etykieta="Wariant" wartosc={`${w.wariantPelny?.skladka ?? "?"} zł / dziecko`} />
           <Pole
             etykieta="Suma ubezpieczenia"

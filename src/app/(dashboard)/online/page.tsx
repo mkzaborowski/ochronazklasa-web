@@ -199,8 +199,16 @@ export default async function OnlineSalesPage({
                     {ETYKIETY_STATUSU[w.status as StatusWniosku]}
                   </span>
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-sm">
-                  {w.numerCertyfikatu ?? "—"}
+                <TableCell className="text-sm">
+                  {/* Przy kilkorgu dzieci jest kilka numerów - po jednym na
+                      certyfikat. W jednej linii rozpychałyby tabelę. */}
+                  {w.numerCertyfikatu
+                    ? w.numerCertyfikatu.split(", ").map((n) => (
+                        <div key={n} className="whitespace-nowrap">
+                          {n}
+                        </div>
+                      ))
+                    : "—"}
                 </TableCell>
               </TableRow>
             ))}

@@ -10,7 +10,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   try {
     const [wniosek, pdf] = await Promise.all([pobierzWniosek(id), pobierzCertyfikat(id)]);
-    const nazwa = `Certyfikat ${(wniosek.numerCertyfikatu ?? id).replaceAll("/", "-")}.pdf`;
+    // Przy kilkorgu dzieci numerów jest kilka - do nazwy pliku bierzemy pierwszy,
+    // bo cała lista dałaby nazwę nie do odczytania.
+    const numery = (wniosek.numerCertyfikatu ?? id).split(", ");
+    const nazwa =
+      numery.length > 1
+        ? `Certyfikaty ${numery[0].replaceAll("/", "-")} i inne.pdf`
+        : `Certyfikat ${numery[0].replaceAll("/", "-")}.pdf`;
     return new NextResponse(pdf, {
       headers: {
         "Content-Type": "application/pdf",
