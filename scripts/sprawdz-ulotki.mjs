@@ -54,6 +54,20 @@ function zbudujModuly() {
   return out;
 }
 
+// Tekst wydruku czytamy popplerem. Bez niego test nie ma czego sprawdzać,
+// więc lepiej powiedzieć to wprost niż wysypać się stosem wywołań.
+try {
+  execFileSync("pdftotext", ["-v"], { stdio: "ignore" });
+} catch {
+  console.error(
+    "Brak `pdftotext` (pakiet poppler-utils) - bez niego nie da się odczytać, " +
+      "co naprawdę wyszło na ulotce.\n" +
+      "  macOS:  brew install poppler\n" +
+      "  Debian: sudo apt-get install -y poppler-utils",
+  );
+  process.exit(1);
+}
+
 const modu = zbudujModuly();
 const { generateFlyerPdf } = await import(path.join(modu, "generate-flyer.js"));
 const { FLYER_TEMPLATES, selectFlyerTemplate, availableFlyersForCombination } =
