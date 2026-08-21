@@ -102,7 +102,10 @@ export interface StanSystemu {
   smtp: { ok: boolean; komunikat: string };
   warianty: PolisaWariantu[];
   wystawioneCertyfikaty: number;
+  /** płatności są prawdziwe (PAYMENTS_MODE=p24) */
   sprzedazOnline: boolean;
+  /** sklep wpuszcza klientów (SPRZEDAZ_OTWARTA=true) — to co innego */
+  sprzedazOtwarta?: boolean;
 }
 
 const zapytaj = async <T>(sciezka: string, init?: RequestInit): Promise<T> => {

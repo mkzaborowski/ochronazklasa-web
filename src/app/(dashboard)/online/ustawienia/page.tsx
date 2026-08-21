@@ -35,7 +35,11 @@ export default async function OnlineSettingsPage() {
   // żeby strona się wywracała.
   const warianty = stan.warianty ?? [];
   const bezNumeru = warianty.filter((w) => !w.numerPolisy?.trim());
+  // Gotowość techniczna to nie to samo co otwarty sklep. Rozdzielone, bo
+  // „System gotowy do sprzedaży" przy zamkniętym sklepie czyta się jak
+  // „sprzedaż działa" - i ktoś przestaje szukać, czemu nie ma zamówień.
   const gotowe = stan.sprzedazOnline && stan.smtp.ok && bezNumeru.length === 0;
+  const otwarty = stan.sprzedazOtwarta === true;
 
   return (
     <div className="space-y-6">
@@ -48,15 +52,24 @@ export default async function OnlineSettingsPage() {
 
       <div
         className={`rounded-lg border p-4 text-sm ${
-          gotowe
+          gotowe && otwarty
             ? "border-emerald-200 bg-emerald-50 text-emerald-900"
             : "border-amber-200 bg-amber-50 text-amber-900"
         }`}
       >
-        {gotowe ? (
+        {gotowe && otwarty ? (
           <>
-            <strong>System gotowy do sprzedaży.</strong> Płatności produkcyjne, poczta działa,
-            każdy wariant ma numer polisy grupowej.
+            <strong>Sprzedaż działa.</strong> Sklep jest otwarty, płatności produkcyjne, poczta
+            działa, każdy wariant ma numer polisy grupowej.
+          </>
+        ) : gotowe ? (
+          <>
+            <strong>System gotowy, ale sklep jest zamknięty.</strong> Płatności produkcyjne,
+            poczta działa, każdy wariant ma numer polisy grupowej — klient z ulicy nie złoży
+            jednak wniosku. Otwiera się to przez <code>SPRZEDAZ_OTWARTA=true</code> w{" "}
+            <code>/opt/ozk-api/.env</code> i <code>bosman restart ozk-api</code>, a po stronie
+            witryny przez <code>VITE_PURCHASE_ENABLED</code> i{" "}
+            <code>VITE_PLATNOSCI_AKTYWNE</code>.
           </>
         ) : (
           <>
@@ -92,6 +105,16 @@ export default async function OnlineSettingsPage() {
             wartosc={stan.trybPlatnosci === "p24" ? "Przelewy24 (produkcja)" : "Testowy (mock)"}
           />
           <Pole etykieta="Środowisko P24" wartosc={stan.p24Sandbox ? "sandbox" : "produkcyjne"} />
+          <Pole
+            etykieta="Sklep"
+            wartosc={
+              otwarty ? (
+                "otwarty dla klientów"
+              ) : (
+                <span className="text-amber-700">zamknięty (tylko klucz demo)</span>
+              )
+            }
+          />
           {stan.trybPlatnosci !== "p24" && (
             <p className="mt-3 text-xs text-muted-foreground">
               Do uruchomienia: <code>P24_MERCHANT_ID</code>, <code>P24_POS_ID</code>,{" "}
