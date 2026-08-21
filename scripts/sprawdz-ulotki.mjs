@@ -12,6 +12,7 @@
 
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { PDFDocument } from "pdf-lib";
 
@@ -98,33 +99,42 @@ for (const tpl of FLYER_TEMPLATES) {
     templateKey: tpl.key, payment: tpl.payment, rows,
     schoolName: SZKOLA, insurancePeriod: OKRES, opiekun: OPIEKUN,
   });
-  const wynik = await PDFDocument.load(doc.bytes);
-  const wart = new Map(
-    wynik.getForm().getFields().map((f) => [f.getName(), (f.getText?.() ?? "").trim()]),
-  );
+  // Czytamy TEKST WYDRUKU, a nie wartości pól: dane rysujemy na stronie
+  // i utrwalamy formularz, więc pola już nie istnieją. To zresztą mocniejszy
+  // sprawdzian - liczy się to, co widzi człowiek, a nie co siedzi w strukturze.
+  const plik = path.join(os.tmpdir(), `ulotka-${tpl.key}.pdf`);
+  writeFileSync(plik, doc.bytes);
+  const druk = execFileSync("pdftotext", ["-f", "1", "-l", "1", plik, "-"])
+    .toString()
+    .replace(/\s+/g, " ");
+  rmSync(plik, { force: true });
+
+  if (!druk.includes("TESTOWIE")) zle(tpl.key, "nazwa szkoły nie trafiła na wydruk");
+  if (!druk.includes(OKRES.replace(" - ", " ")) && !druk.includes(OKRES)) {
+    zle(tpl.key, "okres nie trafił na wydruk");
+  }
+  if (!druk.toUpperCase().includes("TESTOWY OPIEKUN")) zle(tpl.key, "opiekun nie trafił na wydruk");
+  if (!druk.includes(OPIEKUN.email)) zle(tpl.key, "e-mail opiekuna nie trafił na wydruk");
+  if (!druk.includes("600 100 200")) zle(tpl.key, "telefon opiekuna nie trafił na wydruk");
 
   for (const def of spec.fields) {
-    const v = wart.get(def.name) ?? "";
+    if (!def.rect) zle(tpl.key, `pole ${def.name} bez prostokąta - przebuduj mapy`);
     if (def.role === "policy") {
-      const ocz = `${def.prefixAA === false ? "" : "A-A "}90000${def.idx}`;
-      if (v !== ocz) zle(tpl.key, `${def.name} (polisa #${def.idx}) = ${JSON.stringify(v)}, oczekiwano ${JSON.stringify(ocz)}`);
+      const ocz = `A-A 90000${def.idx}`;
+      const bez = `90000${def.idx}`;
+      if (!druk.includes(def.prefixAA === false ? bez : ocz)) {
+        zle(tpl.key, `numeru polisy #${def.idx} nie ma na wydruku`);
+      }
     } else if (def.role === "account") {
-      if (!v.endsWith(String(def.idx).padStart(4, "0"))) zle(tpl.key, `${def.name} (konto #${def.idx}) = ${JSON.stringify(v)}`);
-    } else if (def.role === "school" && !v.includes("TESTOWIE")) {
-      zle(tpl.key, `nazwa szkoły nie podmieniona: ${JSON.stringify(v)}`);
-    } else if (def.role === "period" && v !== OKRES) {
-      zle(tpl.key, `okres nie podmieniony: ${JSON.stringify(v)}`);
-    } else if (def.role === "opiekunName" && !v.toUpperCase().includes("TESTOWY")) {
-      zle(tpl.key, `opiekun nie podmieniony: ${JSON.stringify(v)}`);
-    } else if (def.role === "opiekunEmail" && v !== OPIEKUN.email) {
-      zle(tpl.key, `e-mail opiekuna = ${JSON.stringify(v)}`);
-    } else if (def.role === "opiekunPhone" && !v.includes("600 100 200")) {
-      zle(tpl.key, `telefon opiekuna = ${JSON.stringify(v)}`);
+      if (!druk.includes(String(def.idx).padStart(4, "0"))) {
+        zle(tpl.key, `numeru konta #${def.idx} nie ma na wydruku`);
+      }
     }
   }
 
-  for (const [nazwa, v] of wart) {
-    if (v && SLADY.has(v)) zle(tpl.key, `została wartość od dostawcy: ${nazwa}=${JSON.stringify(v)}`);
+  // NAJWAŻNIEJSZE: nic od dostawcy nie może zostać na wydruku.
+  for (const slad of SLADY) {
+    if (druk.includes(slad)) zle(tpl.key, `został ślad dostawcy: ${JSON.stringify(slad)}`);
   }
 
   const pol = spec.fields.filter((f) => f.role === "policy").length;

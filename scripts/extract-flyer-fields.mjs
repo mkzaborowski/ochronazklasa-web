@@ -15,7 +15,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PDFName, PDFString } from "pdf-lib";
 
 const OUT = path.join(process.cwd(), "templates", "flyers");
 
@@ -103,12 +103,28 @@ async function classify(key, cfg) {
 
   const F = tf.map((f) => {
     const r = f.acroField.getWidgets()[0].getRectangle();
+    // Rozmiar i kolor pola siedzą w jego napisie DA, np.
+    //   "/HeBo 12 Tf 0.25 0.25 0.25 rg"   albo   "1 1 1 rg\n/Helvetica 15 Tf"
+    // Kolejność bywa odwrotna, a szarość zapisana jako "0 g" zamiast "rg".
+    const daObj = f.acroField.dict.get(PDFName.of("DA"));
+    const da = daObj instanceof PDFString ? daObj.asString() : "";
+    const rozmiar = Number(da.match(/([\d.]+)\s+Tf/)?.[1]) || 10;
+    const rgb = da.match(/([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+rg/);
+    const szarosc = da.match(/(?:^|\s)([\d.]+)\s+g(?:\s|$)/);
+    const kolor = rgb
+      ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])]
+      : szarosc
+        ? [Number(szarosc[1]), Number(szarosc[1]), Number(szarosc[1])]
+        : [0, 0, 0];
     return {
       name: f.getName(),
       v: (f.getText?.() ?? "").trim(),
       x: r.x, w: r.width,
       top: pageH - (r.y + r.height), // top-origin y for comparing with words
       h: r.height,
+      // prostokąt w układzie PDF (origo w lewym dolnym rogu) - po nim rysujemy
+      rect: { x: r.x, y: r.y, w: r.width, h: r.height },
+      rozmiar, kolor,
       role: null, idx: undefined, prefixAA: undefined,
     };
   });
@@ -197,8 +213,10 @@ async function classify(key, cfg) {
     payment: cfg.payment,
     period: cfg.period,
     variants: cfg.variants,
-    fields: F.filter((f) => f.role).map(({ name, role, idx, prefixAA }) => ({
+    fields: F.filter((f) => f.role).map(({ name, role, idx, prefixAA, rect, rozmiar, kolor }) => ({
       name, role, ...(idx !== undefined ? { idx } : {}), ...(prefixAA !== undefined ? { prefixAA } : {}),
+      rect: { x: +rect.x.toFixed(2), y: +rect.y.toFixed(2), w: +rect.w.toFixed(2), h: +rect.h.toFixed(2) },
+      rozmiar, kolor,
     })),
   };
   writeFileSync(path.join(OUT, `${key}.fields.json`), JSON.stringify(json, null, 2));

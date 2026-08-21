@@ -1,24 +1,58 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { PDFDocument, StandardFonts, type PDFTextField } from "pdf-lib";
-import type { FlyerContext, GeneratedDocument, FlyerFields } from "./flyer-types";
+import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import type { FlyerContext, GeneratedDocument, FlyerFields, FlyerFieldDef } from "./flyer-types";
 import { FLYER_TEMPLATES } from "./flyer-template-registry";
 
 /** The agency's general service line (first number on every flyer). */
 export const SERVICE_LINE = "533 533 931";
 
 /**
- * The flyer forms use standard PDF fonts (WinAnsi); Polish letters are folded
- * to ASCII on written values. The template's own Polish fields are untouched
- * (no flatten; appearances regenerated only for fields we set).
- * TODO: embed a Unicode font (fontkit) to preserve diacritics in names.
+ * Krój, którym wpisujemy dane na ulotkę.
+ *
+ * Wcześniej szedł tu standardowy Helvetica z kodowaniem WinAnsi - bez polskich
+ * znaków poza „ó". Nazwy trzeba było spłaszczać do ASCII, więc „Szkoła
+ * Podstawowa" drukowało się jako „SZKOLA PODSTAWOWA" na dokumencie, który
+ * dostaje rodzic. Ulotki robione ręcznie w Acrobacie miały ogonki, przez co
+ * nasze wyglądały przy nich na zrobione byle jak.
+ *
+ * PP Mori ma komplet polskich znaków i jest tym samym krojem, którym składamy
+ * stronę i certyfikaty. Plik musi leżeć w templates/, bo tylko ten katalog
+ * trafia do obrazu produkcyjnego.
+ *
+ * TEKST RYSUJEMY, zamiast wypełniać pola formularza: pdf-lib z krojem OTF psuje
+ * przy wypełnianiu odstępy - gubi kropki w datach („1.09.2026" -> „109.2026")
+ * i skleja litery w nazwiskach. Rysowanie tego samego kroju wychodzi poprawnie.
  */
-function fold(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/ł/g, "l")
-    .replace(/Ł/g, "L");
+const FONT_ZWYKLY = "templates/fonts/PPMori-Regular.otf";
+const FONT_POGRUBIONY = "templates/fonts/PPMori-SemiBold.otf";
+
+/** Poniżej tego rozmiaru tekst przestaje być czytelny - lepiej przyciąć. */
+const MIN_ROZMIAR = 6;
+
+/**
+ * Wpisuje tekst w prostokąt pola: wyśrodkowany w pionie, zmniejszany, gdy się
+ * nie mieści w szerokości. Rozmiar i kolor pochodzą z definicji pola
+ * w szablonie, więc wydruk wygląda jak wzór od dostawcy.
+ */
+function rysujWPolu(strona: PDFPage, font: PDFFont, tekst: string, def: FlyerFieldDef): void {
+  if (!def.rect || !tekst) return;
+  const { x, y, w, h } = def.rect;
+  const kolor = def.kolor ?? [0, 0, 0];
+  let rozmiar = def.rozmiar ?? 10;
+  const dostepna = w - 4;
+  while (rozmiar > MIN_ROZMIAR && font.widthOfTextAtSize(tekst, rozmiar) > dostepna) {
+    rozmiar -= 0.25;
+  }
+  strona.drawText(tekst, {
+    x: x + 2,
+    // wysokość wielkich liter to ok. 0,7 rozmiaru — stąd wyśrodkowanie
+    y: y + (h - rozmiar * 0.7) / 2,
+    size: rozmiar,
+    font,
+    color: rgb(kolor[0], kolor[1], kolor[2]),
+  });
 }
 
 function formatPhone(p: string): string {
@@ -43,59 +77,74 @@ export async function generateFlyerPdf(ctx: FlyerContext): Promise<GeneratedDocu
   const spec: FlyerFields = JSON.parse(fieldsRaw);
 
   const pdf = await PDFDocument.load(pdfBytes);
-  const form = pdf.getForm();
-  const helv = await pdf.embedFont(StandardFonts.Helvetica);
+  pdf.registerFontkit(fontkit);
+  const [zwykly, pogrubiony] = await Promise.all([
+    pdf.embedFont(await readFile(path.join(process.cwd(), FONT_ZWYKLY))),
+    pdf.embedFont(await readFile(path.join(process.cwd(), FONT_POGRUBIONY))),
+  ]);
 
-  const setText = (name: string, text: string) => {
-    let f: PDFTextField;
+  // NAJPIERW czyścimy pola, które sami wypełniamy, POTEM utrwalamy formularz,
+  // a rysujemy na końcu.
+  //
+  // Kolejność nie jest dowolna. Ulotki przychodzą wypełnione przykładem, więc
+  // spłaszczenie bez czyszczenia wtapia w stronę cudzą szkołę i cudzego
+  // opiekuna, a nasze wartości lądują na nich - dosłownie jedna litera na
+  // drugiej. Z drugiej strony samo usunięcie formularza zabrałoby też treści,
+  // których NIE nadpisujemy: etykiety składek („50 zł") i termin płatności.
+  const form = pdf.getForm();
+  for (const def of spec.fields) {
+    if (def.role === "deadline") continue; // termin zostaje taki, jak w szablonie
     try {
-      f = form.getTextField(name);
+      form.getTextField(def.name).setText("");
     } catch {
-      return; // field vanished from the template — skip rather than fail
+      /* pole zniknęło z szablonu — nie ma czego czyścić */
     }
-    f.setText(fold(text));
-    try {
-      f.updateAppearances(helv);
-    } catch {
-      /* keep default appearance */
-    }
-  };
+  }
+  try {
+    form.flatten();
+  } catch {
+    /* brak strumieni wyglądu — szablon i tak nie miał czego pokazać */
+  }
+
+  const strona = pdf.getPage(0);
+  const setText = (def: FlyerFieldDef, text: string, font: PDFFont = zwykly) =>
+    rysujWPolu(strona, font, text, def);
 
   for (const def of spec.fields) {
     switch (def.role) {
       case "policy": {
         const variant = spec.variants[def.idx ?? 0];
         const row = ctx.rows.find((r) => r.variantCode === variant);
-        if (row) setText(def.name, `${def.prefixAA === false ? "" : "A-A "}${row.policyNumber}`);
+        if (row) setText(def, `${def.prefixAA === false ? "" : "A-A "}${row.policyNumber}`);
         break;
       }
       case "account": {
         const variant = spec.variants[def.idx ?? 0];
         const row = ctx.rows.find((r) => r.variantCode === variant);
-        if (row?.accountNumber) setText(def.name, row.accountNumber);
+        if (row?.accountNumber) setText(def, row.accountNumber);
         break;
       }
       case "school":
-        if (ctx.schoolName) setText(def.name, ctx.schoolName.toUpperCase());
+        if (ctx.schoolName) setText(def, ctx.schoolName.toUpperCase(), pogrubiony);
         break;
       case "period":
-        if (ctx.insurancePeriod) setText(def.name, ctx.insurancePeriod);
+        if (ctx.insurancePeriod) setText(def, ctx.insurancePeriod);
         break;
       case "opiekunName":
-        setText(def.name, ctx.opiekun.name.toUpperCase());
+        setText(def, ctx.opiekun.name.toUpperCase(), pogrubiony);
         break;
       case "opiekunPhone":
-        setText(def.name, `${SERVICE_LINE} | ${formatPhone(ctx.opiekun.phone)}`);
+        setText(def, `${SERVICE_LINE} | ${formatPhone(ctx.opiekun.phone)}`);
         break;
       case "opiekunEmail":
-        setText(def.name, ctx.opiekun.email);
+        setText(def, ctx.opiekun.email);
         break;
       case "deadline":
         break; // left as authored in the template
     }
   }
 
-  const out = await pdf.save({ updateFieldAppearances: false });
+  const out = await pdf.save();
   return {
     fileName: `ulotka_${ctx.templateKey}.pdf`,
     mimeType: "application/pdf",

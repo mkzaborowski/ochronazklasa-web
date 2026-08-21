@@ -10,47 +10,155 @@
   "fields": [
     {
       "name": "Text1",
-      "role": "school"
+      "role": "school",
+      "rect": {
+        "x": 26.95,
+        "y": 684.11,
+        "w": 539.37,
+        "h": 16.93
+      },
+      "rozmiar": 12,
+      "kolor": [
+        0.25,
+        0.25,
+        0.25
+      ]
     },
     {
       "name": "Text6",
-      "role": "opiekunEmail"
+      "role": "opiekunEmail",
+      "rect": {
+        "x": 162.84,
+        "y": 55.17,
+        "w": 409.1,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
     },
     {
       "name": "Text4",
-      "role": "opiekunName"
+      "role": "opiekunName",
+      "rect": {
+        "x": 33.29,
+        "y": 150.43,
+        "w": 349.03,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        0,
+        0,
+        0
+      ]
     },
     {
       "name": "Text5",
-      "role": "opiekunPhone"
+      "role": "opiekunPhone",
+      "rect": {
+        "x": 162.48,
+        "y": 80.59,
+        "w": 329.13,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
     },
     {
       "name": "Text3",
-      "role": "period"
+      "role": "period",
+      "rect": {
+        "x": 324.24,
+        "y": 572.37,
+        "w": 236.12,
+        "h": 17.3
+      },
+      "rozmiar": 12,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
     },
     {
       "name": "Text7",
       "role": "policy",
       "idx": 1,
-      "prefixAA": true
+      "prefixAA": true,
+      "rect": {
+        "x": 160.67,
+        "y": 449.34,
+        "w": 326.83,
+        "h": 27.07
+      },
+      "rozmiar": 16,
+      "kolor": [
+        0.235,
+        0.333,
+        0.643
+      ]
     },
     {
       "name": "Text8",
       "role": "policy",
       "idx": 2,
-      "prefixAA": true
+      "prefixAA": true,
+      "rect": {
+        "x": 161.39,
+        "y": 419.66,
+        "w": 326.83,
+        "h": 28.51
+      },
+      "rozmiar": 16,
+      "kolor": [
+        0.235,
+        0.333,
+        0.643
+      ]
     },
     {
       "name": "Text9",
       "role": "policy",
       "idx": 3,
-      "prefixAA": true
+      "prefixAA": true,
+      "rect": {
+        "x": 159.95,
+        "y": 390.71,
+        "w": 326.83,
+        "h": 27.07
+      },
+      "rozmiar": 16,
+      "kolor": [
+        0.235,
+        0.333,
+        0.643
+      ]
     },
     {
       "name": "Text2",
       "role": "policy",
       "idx": 0,
-      "prefixAA": true
+      "prefixAA": true,
+      "rect": {
+        "x": 161.39,
+        "y": 477.65,
+        "w": 326.83,
+        "h": 29.24
+      },
+      "rozmiar": 16,
+      "kolor": [
+        0.235,
+        0.333,
+        0.643
+      ]
     }
   ]
 }

@@ -8,49 +8,169 @@
   "fields": [
     {
       "name": "Text1",
-      "role": "school"
+      "role": "school",
+      "rect": {
+        "x": 29.67,
+        "y": 696.09,
+        "w": 536.84,
+        "h": 16.93
+      },
+      "rozmiar": 12,
+      "kolor": [
+        0.251,
+        0.251,
+        0.251
+      ]
     },
     {
       "name": "Text2",
-      "role": "period"
+      "role": "period",
+      "rect": {
+        "x": 327.13,
+        "y": 607.83,
+        "w": 236.12,
+        "h": 17.3
+      },
+      "rozmiar": 12,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
     },
     {
       "name": "Text7",
       "role": "policy",
       "idx": 0,
-      "prefixAA": true
+      "prefixAA": true,
+      "rect": {
+        "x": 79.61,
+        "y": 371.89,
+        "w": 93.91,
+        "h": 90.39
+      },
+      "rozmiar": 11,
+      "kolor": [
+        0,
+        0,
+        0
+      ]
     },
     {
       "name": "Text13",
       "role": "account",
-      "idx": 0
+      "idx": 0,
+      "rect": {
+        "x": 176.23,
+        "y": 370.45,
+        "w": 230.7,
+        "h": 91.12
+      },
+      "rozmiar": 11,
+      "kolor": [
+        0.784,
+        0.066,
+        0.082
+      ]
     },
     {
       "name": "Text8",
       "role": "policy",
       "idx": 1,
-      "prefixAA": true
+      "prefixAA": true,
+      "rect": {
+        "x": 80.34,
+        "y": 278.53,
+        "w": 93.91,
+        "h": 91.12
+      },
+      "rozmiar": 11,
+      "kolor": [
+        0,
+        0,
+        0
+      ]
     },
     {
       "name": "Text14",
       "role": "account",
-      "idx": 1
+      "idx": 1,
+      "rect": {
+        "x": 176.23,
+        "y": 278.17,
+        "w": 230.7,
+        "h": 91.48
+      },
+      "rozmiar": 11,
+      "kolor": [
+        0.784,
+        0.066,
+        0.082
+      ]
     },
     {
       "name": "Text17",
-      "role": "deadline"
+      "role": "deadline",
+      "rect": {
+        "x": 384.31,
+        "y": 256.18,
+        "w": 175.69,
+        "h": 19.47
+      },
+      "rozmiar": 14,
+      "kolor": [
+        0.196,
+        0.333,
+        0.647
+      ]
     },
     {
       "name": "Text18",
-      "role": "opiekunName"
+      "role": "opiekunName",
+      "rect": {
+        "x": 32.57,
+        "y": 151.15,
+        "w": 339.62,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        0,
+        0,
+        0
+      ]
     },
     {
       "name": "Text19",
-      "role": "opiekunPhone"
+      "role": "opiekunPhone",
+      "rect": {
+        "x": 163.2,
+        "y": 80.59,
+        "w": 328.76,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
     },
     {
       "name": "Text21",
-      "role": "opiekunEmail"
+      "role": "opiekunEmail",
+      "rect": {
+        "x": 164.29,
+        "y": 54.89,
+        "w": 409.1,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
     }
   ]
 }

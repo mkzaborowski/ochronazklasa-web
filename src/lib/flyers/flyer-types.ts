@@ -25,12 +25,20 @@ export type FlyerFieldRole =
   | "opiekunPhone"
   | "opiekunEmail";
 
+/** Prostokąt pola w układzie PDF (origo w lewym dolnym rogu strony). */
+export type FlyerFieldRect = { x: number; y: number; w: number; h: number };
+
 /** One entry of the offline-computed AcroForm field→role map. */
 export type FlyerFieldDef = {
   name: string;
   role: FlyerFieldRole;
   idx?: number; // row index for policy/account (top→bottom = variants order)
   prefixAA?: boolean; // policy: whether to write the "A-A " prefix
+  /** gdzie rysować — z prostokąta pola w szablonie */
+  rect?: FlyerFieldRect;
+  /** rozmiar i kolor z definicji pola (napis DA), żeby wydruk wyglądał jak wzór */
+  rozmiar?: number;
+  kolor?: [number, number, number];
 };
 
 /** Parsed `<key>.fields.json` (v2) produced by scripts/extract-flyer-fields. */
