@@ -60,9 +60,16 @@ i w nagłówku każdej wygenerowanej ulotki zostawało
 `npm run fix-flyer-duplicates -- --zapisz`; test generuje każdą ulotkę
 i sprawdza, że nie została w niej żadna wartość od dostawcy.
 
-## Znane ograniczenie
+## Dwie rzeczy, których nie wolno zmienić w generatorze
 
-Wypełniane pola idą standardowym krojem PDF (WinAnsi), więc polskie znaki są
-spłaszczane: „Szkoła" drukuje się jako „SZKOLA". Dotyczy wszystkich ulotek,
-także tych sprzed tej zmiany. Naprawa wymaga osadzenia kroju z polskimi
-znakami (fontkit) — patrz `fold()` w `src/lib/flyers/generate-flyer.ts`.
+**Nie wołamy `form.flatten()`.** Pobrana ulotka ma zostać do edycji: agent
+regularnie zmienia po wygenerowaniu datę ochrony, nazwę szkoły albo numer konta
+i drukuje z Acrobata, nie z panelu. Przez chwilę utrwalaliśmy formularz i z
+panelu wychodził gotowiec bez jednego pola do poprawienia — wróciło to
+reklamacją. `check:ulotki` sprawdza teraz, że każde pole z mapy przetrwało zapis.
+
+**Zapisujemy przez `pdf.save({ updateFieldAppearances: false })`.** Polskie
+znaki bierze się stąd, że wygląd pola generujemy sami krojem PP Mori
+(`updateAppearances`). Domyślne `save()` przelicza wygląd wszystkich pól
+jeszcze raz i potrafi podmienić krój na taki bez ogonków — psując to, co przed
+chwilą wyszło dobrze.

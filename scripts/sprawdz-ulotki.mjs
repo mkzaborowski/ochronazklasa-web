@@ -86,7 +86,9 @@ for (const f of readdirSync(KATALOG).filter((x) => x.endsWith(".pdf"))) {
   }
 }
 
-const SZKOLA = "SZKOLA PODSTAWOWA W TESTOWIE";
+// nazwa z ogonkami CELOWO: przez chwilę wpisywaliśmy na ulotki tekst spłaszczony
+// do ASCII i rodzic dostawał „SZKOLA PODSTAWOWA"
+const SZKOLA = "Szkoła Podstawowa im. Żeromskiego w Testowie";
 // okres celowo inny niż w dostarczonych plikach - inaczej nie da się odróżnić
 // „podmieniono" od „zostało jak było"
 const OKRES = "1.09.2030 - 31.08.2031";
@@ -113,9 +115,8 @@ for (const tpl of FLYER_TEMPLATES) {
     templateKey: tpl.key, payment: tpl.payment, rows,
     schoolName: SZKOLA, insurancePeriod: OKRES, opiekun: OPIEKUN,
   });
-  // Czytamy TEKST WYDRUKU, a nie wartości pól: dane rysujemy na stronie
-  // i utrwalamy formularz, więc pola już nie istnieją. To zresztą mocniejszy
-  // sprawdzian - liczy się to, co widzi człowiek, a nie co siedzi w strukturze.
+  // Czytamy TEKST WYDRUKU, a nie wartości pól - liczy się to, co widzi
+  // człowiek, a nie co siedzi w strukturze. Same pola sprawdzamy osobno niżej.
   const plik = path.join(os.tmpdir(), `ulotka-${tpl.key}.pdf`);
   writeFileSync(plik, doc.bytes);
   const druk = execFileSync("pdftotext", ["-f", "1", "-l", "1", plik, "-"])
@@ -124,6 +125,9 @@ for (const tpl of FLYER_TEMPLATES) {
   rmSync(plik, { force: true });
 
   if (!druk.includes("TESTOWIE")) zle(tpl.key, "nazwa szkoły nie trafiła na wydruk");
+  if (!druk.includes("SZKOŁA") || !druk.includes("ŻEROMSKIEGO")) {
+    zle(tpl.key, "polskie znaki nie wyszły na wydruku");
+  }
   if (!druk.includes(OKRES.replace(" - ", " ")) && !druk.includes(OKRES)) {
     zle(tpl.key, "okres nie trafił na wydruk");
   }
@@ -143,6 +147,21 @@ for (const tpl of FLYER_TEMPLATES) {
       if (!druk.includes(String(def.idx).padStart(4, "0"))) {
         zle(tpl.key, `numeru konta #${def.idx} nie ma na wydruku`);
       }
+    }
+  }
+
+  // Ulotka MUSI zostać do edycji. Agent po pobraniu zmienia datę ochrony, nazwę
+  // szkoły albo numer konta i drukuje z Acrobata - raz już wyszedł stąd gotowiec
+  // bez jednego pola do poprawienia i wróciło to reklamacją.
+  const wygenerowana = await PDFDocument.load(doc.bytes);
+  const polaPoZapisie = new Map(
+    wygenerowana.getForm().getFields().map((f) => [f.getName(), (f.getText?.() ?? "").trim()]),
+  );
+  for (const def of spec.fields) {
+    if (!polaPoZapisie.has(def.name)) {
+      zle(tpl.key, `pole ${def.name} (${def.role}) zniknęło - ulotki nie da się edytować`);
+    } else if (def.role !== "deadline" && !polaPoZapisie.get(def.name)) {
+      zle(tpl.key, `pole ${def.name} (${def.role}) zostało puste`);
     }
   }
 

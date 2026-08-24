@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, type PDFFont, type PDFForm, type PDFTextField } from "pdf-lib";
 import type { FlyerContext, GeneratedDocument, FlyerFields, FlyerFieldDef } from "./flyer-types";
 import { FLYER_TEMPLATES } from "./flyer-template-registry";
 
@@ -11,19 +11,13 @@ export const SERVICE_LINE = "533 533 931";
 /**
  * Krój, którym wpisujemy dane na ulotkę.
  *
- * Wcześniej szedł tu standardowy Helvetica z kodowaniem WinAnsi - bez polskich
- * znaków poza „ó". Nazwy trzeba było spłaszczać do ASCII, więc „Szkoła
- * Podstawowa" drukowało się jako „SZKOLA PODSTAWOWA" na dokumencie, który
- * dostaje rodzic. Ulotki robione ręcznie w Acrobacie miały ogonki, przez co
- * nasze wyglądały przy nich na zrobione byle jak.
+ * Standardowa Helvetica z kodowaniem WinAnsi nie ma polskich znaków poza „ó",
+ * więc nazwy trzeba było spłaszczać do ASCII i „Szkoła Podstawowa" drukowało
+ * się jako „SZKOLA PODSTAWOWA" na dokumencie, który dostaje rodzic.
  *
  * PP Mori ma komplet polskich znaków i jest tym samym krojem, którym składamy
  * stronę i certyfikaty. Plik musi leżeć w templates/, bo tylko ten katalog
  * trafia do obrazu produkcyjnego.
- *
- * TEKST RYSUJEMY, zamiast wypełniać pola formularza: pdf-lib z krojem OTF psuje
- * przy wypełnianiu odstępy - gubi kropki w datach („1.09.2026" -> „109.2026")
- * i skleja litery w nazwiskach. Rysowanie tego samego kroju wychodzi poprawnie.
  */
 const FONT_ZWYKLY = "templates/fonts/PPMori-Regular.otf";
 const FONT_POGRUBIONY = "templates/fonts/PPMori-SemiBold.otf";
@@ -32,27 +26,27 @@ const FONT_POGRUBIONY = "templates/fonts/PPMori-SemiBold.otf";
 const MIN_ROZMIAR = 6;
 
 /**
- * Wpisuje tekst w prostokąt pola: wyśrodkowany w pionie, zmniejszany, gdy się
- * nie mieści w szerokości. Rozmiar i kolor pochodzą z definicji pola
- * w szablonie, więc wydruk wygląda jak wzór od dostawcy.
+ * Rozmiar, przy którym tekst mieści się w polu. Zaczynamy od rozmiaru z szablonu
+ * i schodzimy w dół tylko wtedy, gdy trzeba - dzięki temu typowa ulotka wygląda
+ * dokładnie jak wzór od dostawcy, a nazwa zespołu szkolno-przedszkolnego
+ * z pełnym patronem nie zostaje ucięta w połowie.
  */
-function rysujWPolu(strona: PDFPage, font: PDFFont, tekst: string, def: FlyerFieldDef): void {
-  if (!def.rect || !tekst) return;
-  const { x, y, w, h } = def.rect;
-  const kolor = def.kolor ?? [0, 0, 0];
+function dopasujRozmiar(font: PDFFont, tekst: string, def: FlyerFieldDef): number {
   let rozmiar = def.rozmiar ?? 10;
-  const dostepna = w - 4;
+  const dostepna = (def.rect?.w ?? 0) - 4;
+  if (dostepna <= 0) return rozmiar;
   while (rozmiar > MIN_ROZMIAR && font.widthOfTextAtSize(tekst, rozmiar) > dostepna) {
     rozmiar -= 0.25;
   }
-  strona.drawText(tekst, {
-    x: x + 2,
-    // wysokość wielkich liter to ok. 0,7 rozmiaru — stąd wyśrodkowanie
-    y: y + (h - rozmiar * 0.7) / 2,
-    size: rozmiar,
-    font,
-    color: rgb(kolor[0], kolor[1], kolor[2]),
-  });
+  return rozmiar;
+}
+
+function pole(form: PDFForm, nazwa: string): PDFTextField | null {
+  try {
+    return form.getTextField(nazwa);
+  } catch {
+    return null; // pole zniknęło z szablonu — nie ma czego wypełniać
+  }
 }
 
 function formatPhone(p: string): string {
@@ -65,6 +59,18 @@ function formatPhone(p: string): string {
  * the offline field→role map from `<key>.fields.json` (see
  * scripts/extract-flyer-fields.mjs). Opiekun = the assigned agent; the general
  * service line stays first in the phone field.
+ *
+ * WYPEŁNIAMY POLA I NIE UTRWALAMY FORMULARZA. Przez chwilę było odwrotnie -
+ * tekst rysowaliśmy na stronie i wołaliśmy form.flatten(), przez co pobrana
+ * ulotka była gotowcem bez jednego pola do poprawienia. A agent regularnie musi
+ * zmienić datę ochrony, nazwę szkoły albo numer konta już po wygenerowaniu
+ * i drukuje z Acrobata, nie z panelu.
+ *
+ * Polskie znaki nie wymagają rysowania - wystarczy wygenerować wygląd pola
+ * naszym krojem (updateAppearances) i NIE pozwolić pdf-lib zrobić tego jeszcze
+ * raz przy zapisie. Domyślne `save()` przelicza wygląd wszystkich pól, a jeśli
+ * trafi na krój bez ogonków, psuje to, co przed chwilą wyszło dobrze - stąd
+ * `updateFieldAppearances: false`.
  */
 export async function generateFlyerPdf(ctx: FlyerContext): Promise<GeneratedDocument> {
   const tplDef = FLYER_TEMPLATES.find((t) => t.key === ctx.templateKey);
@@ -83,32 +89,37 @@ export async function generateFlyerPdf(ctx: FlyerContext): Promise<GeneratedDocu
     pdf.embedFont(await readFile(path.join(process.cwd(), FONT_POGRUBIONY))),
   ]);
 
-  // NAJPIERW czyścimy pola, które sami wypełniamy, POTEM utrwalamy formularz,
-  // a rysujemy na końcu.
-  //
-  // Kolejność nie jest dowolna. Ulotki przychodzą wypełnione przykładem, więc
-  // spłaszczenie bez czyszczenia wtapia w stronę cudzą szkołę i cudzego
-  // opiekuna, a nasze wartości lądują na nich - dosłownie jedna litera na
-  // drugiej. Z drugiej strony samo usunięcie formularza zabrałoby też treści,
-  // których NIE nadpisujemy: etykiety składek („50 zł") i termin płatności.
   const form = pdf.getForm();
+
+  // Ulotki przychodzą od dostawcy WYPEŁNIONE przykładem: cudza szkoła, cudzy
+  // opiekun, cudze numery. Czyścimy więc każde pole, za które odpowiadamy,
+  // zanim cokolwiek wpiszemy - inaczej pole bez wartości w tym zamówieniu
+  // (np. numer konta przy składce gotówkowej) wydrukowałoby dane dostawcy.
+  // Termin płatności zostaje taki, jak w szablonie.
   for (const def of spec.fields) {
-    if (def.role === "deadline") continue; // termin zostaje taki, jak w szablonie
+    if (def.role === "deadline") continue;
+    const p = pole(form, def.name);
+    if (!p) continue;
+    p.setText("");
     try {
-      form.getTextField(def.name).setText("");
+      p.updateAppearances(zwykly);
     } catch {
-      /* pole zniknęło z szablonu — nie ma czego czyścić */
+      /* brak strumienia wyglądu — pole i tak nie miało czego pokazać */
     }
   }
-  try {
-    form.flatten();
-  } catch {
-    /* brak strumieni wyglądu — szablon i tak nie miał czego pokazać */
-  }
 
-  const strona = pdf.getPage(0);
-  const setText = (def: FlyerFieldDef, text: string, font: PDFFont = zwykly) =>
-    rysujWPolu(strona, font, text, def);
+  const setText = (def: FlyerFieldDef, tekst: string, font: PDFFont = zwykly) => {
+    if (!tekst) return;
+    const p = pole(form, def.name);
+    if (!p) return;
+    p.setText(tekst);
+    p.setFontSize(dopasujRozmiar(font, tekst, def));
+    try {
+      p.updateAppearances(font);
+    } catch {
+      /* zostaje wygląd domyślny — lepsze to niż brak ulotki */
+    }
+  };
 
   for (const def of spec.fields) {
     switch (def.role) {
@@ -144,7 +155,7 @@ export async function generateFlyerPdf(ctx: FlyerContext): Promise<GeneratedDocu
     }
   }
 
-  const out = await pdf.save();
+  const out = await pdf.save({ updateFieldAppearances: false });
   return {
     fileName: `ulotka_${ctx.templateKey}.pdf`,
     mimeType: "application/pdf",
