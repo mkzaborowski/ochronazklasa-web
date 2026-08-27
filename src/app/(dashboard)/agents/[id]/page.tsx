@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AgentFormDialog } from "@/components/agent-form-dialog";
 import { AgentActiveToggle } from "@/components/agent-active-toggle";
 import { AgentLink } from "@/components/agent-link";
+import { AgentQr } from "@/components/agent-qr";
 import { linkPolecajacy } from "@/lib/agents/kod";
 import { kodyAgenta } from "@/lib/agents/atrybucja";
+import { qrSvgAgenta } from "@/lib/agents/qr";
 import { pobierzWnioski } from "@/lib/online-api";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +122,9 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ i
                   składki.
                 </p>
               ) : null}
+              <div className="border-t pt-4">
+                <AgentQr svg={await qrSvgAgenta(agent.code)} kod={agent.code} />
+              </div>
               {agent.codeHistory.length > 0 ? (
                 <p className="text-xs text-muted-foreground">
                   Wcześniejsze kody ({agent.codeHistory.join(", ")}) nadal działają dla sprzedaży,

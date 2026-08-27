@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { AgentFormDialog } from "@/components/agent-form-dialog";
 import { AgentActiveToggle } from "@/components/agent-active-toggle";
+import { QrCode } from "lucide-react";
 import { KopiujLink } from "@/components/agent-link";
 import { linkPolecajacy } from "@/lib/agents/kod";
 
@@ -84,7 +85,20 @@ export default async function AgentsPage() {
                     </TableCell>
                     <TableCell>
                       {a.code ? (
-                        <KopiujLink link={linkPolecajacy(a.code)} kod={a.code} />
+                        <span className="inline-flex items-center gap-1.5">
+                          <KopiujLink link={linkPolecajacy(a.code)} kod={a.code} />
+                          {/* Sam kod QR jest na karcie agenta - tu tylko pobranie,
+                              bo miniaturka w każdym wierszu zamieniłaby tabelę w mozaikę. */}
+                          <a
+                            href={`/api/agenci/${encodeURIComponent(a.code)}/qr`}
+                            download
+                            title={`Pobierz kod QR agenta ${a.code}`}
+                            aria-label={`Pobierz kod QR agenta ${a.code}`}
+                            className="inline-flex items-center rounded-md border p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                          >
+                            <QrCode className="size-3.5" />
+                          </a>
+                        </span>
                       ) : (
                         <Badge variant="secondary">brak kodu</Badge>
                       )}

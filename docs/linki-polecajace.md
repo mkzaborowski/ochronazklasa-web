@@ -17,6 +17,7 @@ komukolwiek byłoby wymyślaniem zasługi, której nie było.
 | Gdzie | Co robi | Plik |
 | --- | --- | --- |
 | ochronazklasa.pl (SPA) | zdejmuje `?a=` z adresu przy starcie, zapamiętuje na 30 dni, dokleja do wniosku | `src/lib/polecenie.ts` |
+| ochronazklasa.pl (SPA) | nieobowiązkowe pole „Kod opiekuna polisy" w kroku z danymi — dla rodziców, którzy przyszli z ulotki, a nie z linku | `src/components/PurchasePage/PoleOpiekuna.tsx` |
 | ozk-api | normalizuje i zapisuje w kolumnie `wnioski.kod_agenta` | `src/polecenia.ts`, `src/db.ts` |
 | panel | dopasowuje kod do agenta przy wyświetlaniu | `src/lib/agents/{kod,atrybucja}.ts` |
 
@@ -24,6 +25,29 @@ komukolwiek byłoby wymyślaniem zasługi, której nie było.
 usługa (SQLite w ozk-api) i nie zna tabeli agentów. Nazwisko dokłada panel przy
 wyświetlaniu — dzięki temu zmiana nazwiska agenta nie przepisuje historii
 sprzedaży, a awaria panelu nie zatrzymuje sklepu.
+
+## Dwie drogi kodu, jedno miejsce zapisu
+
+Kod trafia do wniosku albo z linku (`?a=KOD`), albo z ręki — z pola w kroku
+z danymi. Obie drogi zapisują się w tym samym miejscu i po tych samych
+zasadach, więc **wygrywa ostatnie wskazanie**: rodzic, który wszedł z linku
+jednego agenta, a wpisał kod drugiego, kupuje u drugiego. Pole jest wypełnione
+kodem z linku, żeby było widać, co pójdzie na wniosek.
+
+Ręczne wpisanie powstało z prostego powodu: nie każdy rodzic wchodzi z linku.
+Dostaje ulotkę w szkole, słyszy kod przez telefon, pyta znajomych, kto prowadzi
+ich placówkę. Bez tego pola takie zakupy zostawały nieprzypisane, choć agent
+faktycznie za nimi stał.
+
+## Kod QR
+
+Każdy agent ma kod QR swojego linku — na karcie agenta w panelu, z pobieraniem
+w dwóch formatach: **PNG** na ekran i do wiadomości, **SVG** do druku. Na ulotce
+rastrowy kod w powiększeniu rozłazi się na piksele i skaner przestaje go czytać.
+
+Trasa: `GET /api/agenci/<KOD>/qr` (dodaj `?format=svg`). Wymaga zalogowania
+i sprawdza, czy agent o tym kodzie istnieje — kod QR prowadzący do sprzedaży,
+która nie przypisze się do nikogo, lepiej żeby nie trafił na wydruk.
 
 ## Zasady, których nie wolno złamać
 
