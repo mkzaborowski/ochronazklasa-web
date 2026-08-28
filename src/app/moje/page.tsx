@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { School, FileText, Globe, Wallet } from "lucide-react";
+import { School, FileText, Globe, Wallet, Link2 as LinkIcon } from "lucide-react";
 import { kartaZalogowanegoAgenta, daneAgenta, BRAK_KARTY } from "@/lib/agents/portal";
 import { linkPolecajacy } from "@/lib/agents/kod";
 import { qrSvgAgenta } from "@/lib/agents/qr";
@@ -52,42 +52,56 @@ export default async function MojPortalPage() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{karta.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          {karta.email}
-          {karta.phone ? ` · ${karta.phone}` : ""}
-          {karta.code ? ` · kod ${karta.code}` : ""}
-        </p>
-      </div>
-
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="font-medium">Powiadomienia o sprzedaży</div>
-            <p className="text-sm text-muted-foreground">
-              Mail za każdym razem, gdy ktoś kupi ubezpieczenie z Twojego kodu opiekuna.
-            </p>
+      {/* Nagłówek niesie kolor marki, żeby portal nie zaczynał się od szarej
+          kartki. Kod opiekuna wygląda tu jak plakietka, bo agent podaje go
+          przez telefon i musi go znaleźć wzrokiem w sekundę. */}
+      <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--granat)] via-[var(--granat-2)] to-[var(--granat-3)] p-6 md:p-8 text-white shadow-[0_18px_40px_-24px_rgba(14,26,51,.9)]">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="min-w-0">
+            <div className="text-[11px] font-bold uppercase tracking-[2px] text-white/60">
+              Panel agenta
+            </div>
+            <h1 className="mt-1.5 truncate text-2xl font-semibold tracking-tight md:text-3xl">
+              {karta.name}
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/70">
+              {karta.code ? (
+                <span className="rounded-lg bg-white/15 px-2.5 py-1 font-mono text-sm font-semibold tracking-wide text-white">
+                  {karta.code}
+                </span>
+              ) : null}
+              <span className="truncate">{karta.email}</span>
+              {karta.phone ? <span>· {karta.phone}</span> : null}
+            </div>
           </div>
-          <PrzelacznikPowiadomien wlaczone={karta.powiadomieniaEmail} />
+          <div className="shrink-0 rounded-xl bg-white/10 p-3 backdrop-blur-sm">
+            <div className="mb-2 text-xs font-medium text-white/70">Powiadomienia o sprzedaży</div>
+            <PrzelacznikPowiadomien wlaczone={karta.powiadomieniaEmail} />
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kafelek Ikona={School} liczba={statystyki.szkoly} opis="Przypisane szkoły" />
-        <Kafelek Ikona={FileText} liczba={statystyki.polisyGrupowe} opis="Polisy grupowe" />
-        <Kafelek Ikona={Globe} liczba={statystyki.sprzedazOnline} opis="Sprzedaż online" />
+        <Kafelek Ikona={School} liczba={statystyki.szkoly} opis="Przypisane szkoły" barwa="indygo" />
+        <Kafelek Ikona={FileText} liczba={statystyki.polisyGrupowe} opis="Polisy grupowe" barwa="fiolet" />
+        <Kafelek Ikona={Globe} liczba={statystyki.sprzedazOnline} opis="Sprzedaż online" barwa="blekit" />
         <Kafelek
           Ikona={Wallet}
           liczba={`${statystyki.przychodOnlineZl.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} zł`}
           opis={`Składka z ${statystyki.onlineOplacone} opłaconych`}
+          barwa="zielen"
         />
       </div>
 
       {karta.code ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Twój link polecający</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span className="flex size-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                <LinkIcon className="size-3.5" />
+              </span>
+              Twój link polecający
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <AgentLink link={linkPolecajacy(karta.code)} kod={karta.code} />
@@ -97,7 +111,7 @@ export default async function MojPortalPage() {
               <strong className="font-medium text-foreground">{karta.code}</strong> działa też bez
               linku: rodzic może wpisać go w formularzu zakupu, w kroku z danymi.
             </p>
-            <div className="border-t pt-4">
+            <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4">
               <AgentQr svg={await qrSvgAgenta(karta.code)} kod={karta.code} />
             </div>
           </CardContent>
@@ -106,7 +120,15 @@ export default async function MojPortalPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Twoje szkoły ({szkoly.length})</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+              <School className="size-3.5" />
+            </span>
+            Twoje szkoły
+            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+              {szkoly.length}
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {szkoly.length === 0 ? (
@@ -121,7 +143,7 @@ export default async function MojPortalPage() {
                     <div className="truncate font-medium">{s.nazwa}</div>
                     <div className="truncate text-xs text-muted-foreground">{s.adres}</div>
                   </div>
-                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                  <span className="shrink-0 rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-violet-700">
                     {s.liczbaPolis} {s.liczbaPolis === 1 ? "polisa" : "polis"}
                   </span>
                 </li>
@@ -133,8 +155,14 @@ export default async function MojPortalPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Twoje polisy ({polisy.wiersze.length})
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+              <FileText className="size-3.5" />
+            </span>
+            Twoje polisy
+            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">
+              {polisy.wiersze.length}
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -214,22 +242,40 @@ export default async function MojPortalPage() {
   );
 }
 
+/**
+ * Każdy licznik ma własną barwę, ta sama za każdym wejściem.
+ * Kolor niesie tu znaczenie: agent wraca po tę samą liczbę i po tygodniu
+ * szuka jej po plamie koloru, a nie po czytaniu czterech podpisów.
+ */
+const BARWY = {
+  indygo: { chip: "bg-indigo-100 text-indigo-700", kreska: "bg-indigo-500", liczba: "text-indigo-950" },
+  fiolet: { chip: "bg-violet-100 text-violet-700", kreska: "bg-violet-500", liczba: "text-violet-950" },
+  blekit: { chip: "bg-sky-100 text-sky-700", kreska: "bg-sky-500", liczba: "text-sky-950" },
+  zielen: { chip: "bg-emerald-100 text-emerald-700", kreska: "bg-emerald-500", liczba: "text-emerald-950" },
+} as const;
+
 function Kafelek({
   Ikona,
   liczba,
   opis,
+  barwa,
 }: {
   Ikona: React.ComponentType<{ className?: string }>;
   liczba: number | string;
   opis: string;
+  barwa: keyof typeof BARWY;
 }) {
+  const b = BARWY[barwa];
   return (
-    <div className="rounded-lg border p-4">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Ikona className="size-4" />
-        <span className="text-xs">{opis}</span>
+    <div className="relative overflow-hidden rounded-xl border bg-card p-4 pl-5 transition-shadow hover:shadow-md">
+      <span className={`absolute inset-y-0 left-0 w-1 ${b.kreska}`} aria-hidden="true" />
+      <div className="flex items-center gap-2.5">
+        <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${b.chip}`}>
+          <Ikona className="size-4" />
+        </span>
+        <span className="text-xs leading-tight text-muted-foreground">{opis}</span>
       </div>
-      <div className="mt-2 text-2xl font-semibold tabular-nums">{liczba}</div>
+      <div className={`mt-3 text-2xl font-semibold tabular-nums ${b.liczba}`}>{liczba}</div>
     </div>
   );
 }
