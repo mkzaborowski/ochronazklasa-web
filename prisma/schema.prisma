@@ -319,12 +319,17 @@ model Agent {
   // wskaznik na agenta (baza sprzedazy to osobna usluga).
   codeHistory String[] @default([])
   active      Boolean  @default(true)
+  // Powiadomienie mailem o sprzedazy z wlasnego kodu. Domyslnie wlaczone -
+  // agent, ktory nie wie, ze cos sprzedal, nie zadzwoni do klienta.
+  // Wylacza je sam ze swojego portalu.
+  powiadomieniaEmail Boolean @default(true)
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   schoolRecords SchoolRecord[]
   policyholders School[]
+  powiadomienia PowiadomienieSprzedazy[]
   // konto, ktorym ten agent loguje sie do panelu (opcjonalne)
   user          User?
 
@@ -369,4 +374,16 @@ model SchoolRecord {
   @@index([city])
   @@index([voivodeship])
   @@index([assignedAgentId])
+}
+
+/// Slad wyslanego powiadomienia o sprzedazy - jeden wniosek, jeden mail.
+model PowiadomienieSprzedazy {
+  id        String   @id @default(cuid())
+  wniosekId String   @unique
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  email     String
+  wyslano   DateTime @default(now())
+
+  @@index([agentId])
 }

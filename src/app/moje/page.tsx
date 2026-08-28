@@ -5,6 +5,7 @@ import { linkPolecajacy } from "@/lib/agents/kod";
 import { qrSvgAgenta } from "@/lib/agents/qr";
 import { AgentLink } from "@/components/agent-link";
 import { AgentQr } from "@/components/agent-qr";
+import { PrzelacznikPowiadomien } from "@/components/przelacznik-powiadomien";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ETYKIETY_ZRODLA, type ZrodloPolisy } from "@/lib/polisy/wszystkie";
 import {
@@ -58,6 +59,18 @@ export default async function MojPortalPage() {
           {karta.phone ? ` · ${karta.phone}` : ""}
           {karta.code ? ` · kod ${karta.code}` : ""}
         </p>
+      </div>
+
+      <div className="rounded-lg border bg-muted/30 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-medium">Powiadomienia o sprzedaży</div>
+            <p className="text-sm text-muted-foreground">
+              Mail za każdym razem, gdy ktoś kupi ubezpieczenie z Twojego kodu opiekuna.
+            </p>
+          </div>
+          <PrzelacznikPowiadomien wlaczone={karta.powiadomieniaEmail} />
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -24,6 +24,7 @@ export interface KartaAgenta {
   code: string | null;
   codeHistory: string[];
   active: boolean;
+  powiadomieniaEmail: boolean;
 }
 
 /** Konto zalogowane, ale bez powiązanej karty agenta. */
@@ -54,6 +55,7 @@ export async function kartaZalogowanegoAgenta(): Promise<KartaAgenta | typeof BR
             code: true,
             codeHistory: true,
             active: true,
+            powiadomieniaEmail: true,
           },
         },
       },

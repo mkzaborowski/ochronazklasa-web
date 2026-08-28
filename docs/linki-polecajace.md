@@ -110,3 +110,37 @@ zobaczyłby sprzedaż wszystkich — patrz `tylkoAgenta` w `src/lib/polisy/wszys
 `/moje` NIGDY nie odsyła do panelu biura. Konto bez podpiętej karty dostaje tam
 komunikat, a nie kolejne przekierowanie — inaczej powstałaby pętla bez jednego
 zdania wyjaśnienia.
+
+## Powiadomienia o sprzedaży
+
+Agent dostaje maila, gdy ktoś kupi ubezpieczenie z jego kodu opiekuna. Bez tego
+dowiadywał się o sprzedaży dopiero wtedy, gdy sam zajrzał do panelu — a nie
+zadzwoni do klienta, o którym nie wie.
+
+**Dopiero po opłaceniu.** Wniosek oczekujący na płatność bywa porzucany
+w bramce, a mail o sprzedaży, której nie było, jest gorszy niż brak maila.
+
+**Wyłącza sam** — przełącznikiem na swojej karcie w `/moje`. To jedyna rzecz,
+którą agent może w panelu zmienić, i dotyczy wyłącznie jego skrzynki: kartę
+bierzemy z konta zalogowanego, nie z parametru, więc nikt nie wyciszy koledze.
+
+### Uruchamianie
+
+Zadanie chodzi z crona na serwerze, nie z pętli w procesie: panel restartuje się
+przy każdym wdrożeniu, a licznik w pamięci znaczyłby, że po wdrożeniu okno się
+przesuwa i część sprzedaży zostaje bez powiadomienia.
+
+```
+*/10 * * * * curl -fsS -X POST -H "Authorization: Bearer $POWIADOMIENIA_SEKRET" \
+  http://ochrona-app-1:3000/api/powiadomienia/sprzedaz >/dev/null
+```
+
+Wymaga `POWIADOMIENIA_SEKRET` i `POCZTA_KLUCZ` w `/opt/ochrona/.env`.
+Bez sekretu trasa odpowiada 503, bez klucza poczty zadanie kończy się błędem
+z jasnym komunikatem, zamiast po cichu nic nie wysłać.
+
+Idempotencja jest podwójna: ślad w tabeli `PowiadomienieSprzedazy` (jeden
+wniosek = jedno powiadomienie) i klucz idempotencji w usłudze pocztowej. Sam
+klucz by wystarczył, ale wtedy o powtórce dowiadywalibyśmy się od agenta,
+który dostał dwa takie same maile. Ślad zapisujemy PO udanej wysyłce — zapis
+przed nią znaczyłby, że nieudany list nigdy się nie ponowi.
