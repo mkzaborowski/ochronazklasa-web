@@ -22,14 +22,22 @@ import { linkPolecajacy, normalizujKod } from "@/lib/agents/kod";
 export async function GET(req: Request, { params }: { params: Promise<{ kod: string }> }) {
   const devBypass =
     process.env.AUTH_DISABLED === "true" && process.env.NODE_ENV !== "production";
-  if (!devBypass) {
-    const session = await auth();
-    if (!session?.user) return new Response("Unauthorized", { status: 401 });
-  }
+  const session = devBypass ? null : await auth();
+  if (!devBypass && !session?.user) return new Response("Unauthorized", { status: 401 });
 
   const { kod: surowy } = await params;
   const kod = normalizujKod(decodeURIComponent(surowy));
   if (!kod) return new Response("Nieprawidłowy kod agenta", { status: 400 });
+
+  // Agent pobiera WYŁĄCZNIE swój kod QR. Biuro rozdaje materiały wszystkim,
+  // ale agentowi cudzy kod nie jest do niczego potrzebny - a mając adres tej
+  // trasy mógłby po nim chodzić i zbierać kody kolegów.
+  if (session?.user?.role === "AGENT") {
+    const konto = await db.user
+      .findUnique({ where: { id: session.user.id }, select: { agent: { select: { code: true } } } })
+      .catch(() => null);
+    if (konto?.agent?.code !== kod) return new Response("Forbidden", { status: 403 });
+  }
 
   // Kod nieistniejącego agenta dałby QR prowadzący do sprzedaży, która nie
   // przypisze się do nikogo - lepiej powiedzieć to wprost niż wydrukować.

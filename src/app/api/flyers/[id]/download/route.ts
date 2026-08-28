@@ -7,6 +7,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!devBypass) {
     const session = await auth();
     if (!session?.user) return new Response("Unauthorized", { status: 401 });
+    // Rola AGENT ma własny portal i nie pobiera dokumentów biura.
+    if (session.user.role === "AGENT") return new Response("Forbidden", { status: 403 });
   }
 
   const { id } = await params;

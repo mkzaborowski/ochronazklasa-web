@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireBiuro } from "@/lib/auth-helpers";
 import { classifyIdentifier, normalizeRegon, digitsOnly } from "@/lib/identifiers";
 
 export type PolicyholderMatch = {
@@ -50,7 +50,7 @@ function schoolAddress(r: {
  * "no match" — manual entry must always remain possible.
  */
 export async function lookupPolicyholder(identifier: string): Promise<LookupResult> {
-  await requireUser();
+  await requireBiuro();
   const kind = classifyIdentifier(identifier);
 
   if (kind === "REGON") {

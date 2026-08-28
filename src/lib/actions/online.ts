@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { ponowRealizacje, wyslijPonownie } from "@/lib/online-api";
+import { requireBiuro } from "@/lib/auth-helpers";
 
 export async function resendCertificateAction(id: string) {
+  await requireBiuro();
   try {
     const wynik = await wyslijPonownie(id);
     revalidatePath(`/online/${id}`);
@@ -14,6 +16,7 @@ export async function resendCertificateAction(id: string) {
 }
 
 export async function retryFulfilmentAction(id: string) {
+  await requireBiuro();
   try {
     const wynik = await ponowRealizacje(id);
     revalidatePath(`/online/${id}`);

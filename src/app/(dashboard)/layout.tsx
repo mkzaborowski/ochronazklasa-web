@@ -5,6 +5,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 export default async function DashboardLayout({
@@ -13,6 +14,15 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const sessionUser = await getCurrentUser();
+
+  // Rola AGENT nie wchodzi do panelu biura. Blokada stoi TUTAJ, w layoucie
+  // serwerowym, a nie w menu ani w middleware: ukrycie linków chowa drogę,
+  // ale nie zamyka drzwi, a adres da się wpisać z ręki.
+  //
+  // Odsyłamy do /moje, które NIGDY nie odsyła z powrotem - konto bez karty
+  // agenta dostaje tam komunikat, a nie kolejne przekierowanie. Inaczej
+  // powstałaby pętla bez jednego zdania wyjaśnienia.
+  if (sessionUser?.role === "AGENT") redirect("/moje");
   const user = sessionUser
     ? { name: sessionUser.name, email: sessionUser.email, image: sessionUser.image }
     : null;

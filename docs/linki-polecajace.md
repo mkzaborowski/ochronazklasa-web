@@ -74,3 +74,39 @@ która nie przypisze się do nikogo, lepiej żeby nie trafił na wydruk.
   `npm run agenci:kody -- --zapisz`.
 - Link do skopiowania: profil agenta albo kolumna „Link polecający” na liście.
 - Sprzedaż wg agentów: pulpit i `/online` (filtr „Agent”).
+
+## Portal agenta
+
+Agent loguje się do tego samego panelu co biuro (`/login`) i trafia na `/moje` —
+własną kartę bez edycji: przypisane szkoły, polisy tych szkół, sprzedaż online
+ze swoich kodów, link polecający z kodem QR i proste liczniki.
+
+Konto zakłada biuro:
+
+```
+npm run konto-agenta -- <email-logowania> <hasło> <KOD-AGENTA>
+```
+
+Kod agenta jest obowiązkowy, bo to on wiąże konto z kartą (`User.agentId`).
+Rola sama w sobie nie mówi, CZYJE dane pokazać.
+
+### Gdzie stoi blokada
+
+Nie w menu i nie w middleware, tylko po stronie serwera, w trzech miejscach:
+
+| Co | Gdzie | Zasada |
+| --- | --- | --- |
+| Strony panelu biura | `src/app/(dashboard)/layout.tsx` | rola AGENT → przekierowanie na `/moje` |
+| Akcje serwerowe | `requireBiuro()` w `src/lib/auth-helpers.ts` | zakładanie klientów, generowanie polis i ulotek, kasowanie — tylko ADMIN/VIEWER |
+| Trasy API | `src/app/api/**` | pobieranie dokumentów biura zabronione dla AGENT; kod QR wyłącznie własny |
+
+Ukrycie linków chowa drogę, ale nie zamyka drzwi — adres da się wpisać z ręki,
+a akcję serwerową wywołać z pominięciem strony.
+
+**Puste zawężenie nie znaczy „bez filtru".** Agent bez nadanego kodu nie ma
+żadnej sprzedaży online. Gdyby brak kodów potraktować jak brak filtru,
+zobaczyłby sprzedaż wszystkich — patrz `tylkoAgenta` w `src/lib/polisy/wszystkie.ts`.
+
+`/moje` NIGDY nie odsyła do panelu biura. Konto bez podpiętej karty dostaje tam
+komunikat, a nie kolejne przekierowanie — inaczej powstałaby pętla bez jednego
+zdania wyjaśnienia.

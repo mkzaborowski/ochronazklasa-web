@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { clientSchema } from "@/lib/validations";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireBiuro } from "@/lib/auth-helpers";
 import { logAudit } from "@/lib/audit";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -15,7 +15,7 @@ export async function createClient(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const user = await requireUser();
+  const user = await requireBiuro();
 
   const parsed = clientSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -52,7 +52,7 @@ export async function createClient(
 }
 
 export async function deleteClient(id: string) {
-  const user = await requireUser();
+  const user = await requireBiuro();
   await db.client.delete({ where: { id } });
   await logAudit({
     userId: user.id,

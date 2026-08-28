@@ -37,3 +37,15 @@ export async function requireRole(roles: Role[]) {
   if (!user.role || !roles.includes(user.role)) redirect("/");
   return user;
 }
+
+/**
+ * Wymaga konta BIURA (admin albo podgląd).
+ *
+ * Rola AGENT ma własny portal i nie wykonuje pracy biura: nie zakłada klientów,
+ * nie generuje polis ani ulotek, nie kasuje niczego. Sam layout panelu nie
+ * wystarczy, żeby to wymusić — akcje serwerowe i trasy API da się wywołać
+ * z pominięciem strony, na której stoi blokada.
+ */
+export async function requireBiuro() {
+  return requireRole(["ADMIN", "VIEWER"]);
+}

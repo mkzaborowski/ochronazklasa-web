@@ -14,6 +14,8 @@ export async function GET(
   if (!devBypass) {
     const session = await auth();
     if (!session?.user) return new Response("Unauthorized", { status: 401 });
+    // Rola AGENT ma własny portal i nie pobiera dokumentów biura.
+    if (session.user.role === "AGENT") return new Response("Forbidden", { status: 403 });
   }
 
   const { id } = await params;

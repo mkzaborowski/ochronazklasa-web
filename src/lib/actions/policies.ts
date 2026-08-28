@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { policySchema } from "@/lib/validations";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireBiuro } from "@/lib/auth-helpers";
 import { logAudit } from "@/lib/audit";
 import type { ActionState } from "@/lib/actions/clients";
 
@@ -13,7 +13,7 @@ export async function createPolicy(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const user = await requireUser();
+  const user = await requireBiuro();
 
   const parsed = policySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -47,7 +47,7 @@ export async function createPolicy(
 }
 
 export async function deletePolicy(id: string) {
-  const user = await requireUser();
+  const user = await requireBiuro();
   await db.policy.delete({ where: { id } });
   await logAudit({
     userId: user.id,

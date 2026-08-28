@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireBiuro } from "@/lib/auth-helpers";
 import { logAudit } from "@/lib/audit";
 import { isVariantCode, type VariantCode } from "@/lib/interrisk/variants";
 import {
@@ -19,7 +19,7 @@ export async function generateFlyer(
   _prev: FlyerActionState,
   formData: FormData,
 ): Promise<FlyerActionState> {
-  const user = await requireUser();
+  const user = await requireBiuro();
   const schoolId = String(formData.get("schoolId") ?? "");
   const payment = String(formData.get("payment") ?? "") as PaymentType;
   if (payment !== "cash" && payment !== "wire") return { error: "Wybierz formę płatności." };
@@ -96,7 +96,7 @@ export async function generateFlyer(
 }
 
 export async function deleteFlyer(id: string) {
-  const user = await requireUser();
+  const user = await requireBiuro();
   const flyer = await db.generatedFlyer.delete({ where: { id } });
   await logAudit({ userId: user.id, action: "flyer.delete", entity: "GeneratedFlyer", entityId: id });
   revalidatePath(`/schools/${flyer.schoolId}`);

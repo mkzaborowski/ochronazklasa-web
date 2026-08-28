@@ -21,7 +21,8 @@
     "check:numeracja": "node scripts/sprawdz-numeracje-stron.mjs",
     "check:ulotki": "node scripts/sprawdz-ulotki.mjs",
     "fix-flyer-duplicates": "node scripts/napraw-zdublowane-pola.mjs",
-    "agenci:kody": "node --env-file=.env scripts/nadaj-kody-agentom.mjs"
+    "agenci:kody": "node --env-file=.env scripts/nadaj-kody-agentom.mjs",
+    "konto-agenta": "node --env-file=.env scripts/konto-agenta.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

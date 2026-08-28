@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireBiuro } from "@/lib/auth-helpers";
 import { logAudit } from "@/lib/audit";
 import { issuePolicySchema } from "@/lib/validations";
 import {
@@ -25,7 +25,7 @@ export type PreviewRow =
  * assignment happens in `generatePolicies`.
  */
 export async function previewAssignments(variantCodes: string[]): Promise<PreviewRow[]> {
-  await requireUser();
+  await requireBiuro();
   // Kolejność od najniższej składki do najwyższej. Numery kont i polis są
   // przydzielane po kolei z puli, więc to sortowanie decyduje o tym, czy numer
   // rośnie razem ze składką - a tak są potem czytane i uzgadniane w InterRisk.
@@ -68,7 +68,7 @@ export async function previewAssignments(variantCodes: string[]): Promise<Previe
 export type GenerateResult = { error?: string };
 
 export async function generatePolicies(input: unknown): Promise<GenerateResult> {
-  const user = await requireUser();
+  const user = await requireBiuro();
 
   const parsed = issuePolicySchema.safeParse(input);
   if (!parsed.success) {
@@ -219,7 +219,7 @@ export async function updatePolicyFile(
   policyId: string,
   formData: FormData,
 ): Promise<{ error?: string; ok?: boolean }> {
-  const user = await requireUser();
+  const user = await requireBiuro();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Wybierz plik DOCX." };
@@ -243,7 +243,7 @@ export async function updatePolicyFile(
 }
 
 export async function deleteSchool(id: string) {
-  const user = await requireUser();
+  const user = await requireBiuro();
   await db.school.delete({ where: { id } });
   await logAudit({ userId: user.id, action: "school.delete", entity: "School", entityId: id });
   revalidatePath("/schools");

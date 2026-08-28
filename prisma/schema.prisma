@@ -31,6 +31,11 @@ model User {
   passwordHash  String?
   role          Role      @default(AGENT)
   active        Boolean   @default(true)
+  // Konto agenta wskazuje na jego kartę. Bez tego powiazania uzytkownik z rola
+  // AGENT nie ma czego zobaczyc - portal pokazuje wylacznie dane jego agenta.
+  // Admin nie ma tu nic; jego uprawnienia nie biora sie z karty agenta.
+  agentId       String?   @unique
+  agent         Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -320,6 +325,8 @@ model Agent {
 
   schoolRecords SchoolRecord[]
   policyholders School[]
+  // konto, ktorym ten agent loguje sie do panelu (opcjonalne)
+  user          User?
 
   @@index([active])
 }
