@@ -1,0 +1,126 @@
+{
+  "payment": "cash",
+  "period": "2Y",
+  "variants": [
+    "50PLNV50",
+    "85PLNV50"
+  ],
+  "fields": [
+    {
+      "name": "Text1",
+      "role": "school",
+      "rect": {
+        "x": 26.95,
+        "y": 684.11,
+        "w": 539.37,
+        "h": 16.93
+      },
+      "rozmiar": 12,
+      "kolor": [
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "name": "Text2",
+      "role": "policy",
+      "idx": 0,
+      "prefixAA": true,
+      "rect": {
+        "x": 159.77,
+        "y": 448.94,
+        "w": 326.83,
+        "h": 59.27
+      },
+      "rozmiar": 16,
+      "kolor": [
+        0.235,
+        0.333,
+        0.643
+      ]
+    },
+    {
+      "name": "Text6",
+      "role": "opiekunEmail",
+      "rect": {
+        "x": 162.84,
+        "y": 55.17,
+        "w": 409.1,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "Text4",
+      "role": "opiekunName",
+      "rect": {
+        "x": 33.29,
+        "y": 150.43,
+        "w": 349.03,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Text5",
+      "role": "opiekunPhone",
+      "rect": {
+        "x": 162.48,
+        "y": 80.59,
+        "w": 329.13,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "Text3",
+      "role": "period",
+      "rect": {
+        "x": 324.24,
+        "y": 572.37,
+        "w": 236.12,
+        "h": 17.3
+      },
+      "rozmiar": 12,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "Text7",
+      "role": "policy",
+      "idx": 1,
+      "prefixAA": true,
+      "rect": {
+        "x": 160.31,
+        "y": 389.26,
+        "w": 326.83,
+        "h": 59.27
+      },
+      "rozmiar": 16,
+      "kolor": [
+        0.235,
+        0.333,
+        0.643
+      ]
+    }
+  ]
+}

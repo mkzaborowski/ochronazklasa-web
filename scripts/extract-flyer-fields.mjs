@@ -29,6 +29,22 @@ const V50_FULL = ["50PLNV50", "65PLNV50", "90PLNV50", "140PLNV50", "195PLNV50"];
 // „okres ubezpieczenia" na pierwszej — to pole i tak nadpisujemy przy
 // generowaniu.
 const MAP = {
+  // --- dostarczone 28.08.2026 ---
+  // Skladki przy przelewie czytamy z pol formularza; przy gotowce sa grafika,
+  // wiec jedynym zrodlem jest nazwa pliku od dostawcy. Wartosc "1% swiadczenia"
+  // ze strony 2 NIE rozstrzyga: 616 to zarowno 85 zl, jak i 90 zl w dwoch
+  // roznych skalach skladek.
+  "v50-50-65-cash-any": { payment: "cash", period: "ANY", variants: ["50PLNV50", "65PLNV50"] },
+  "v50-65-wire-1y": { payment: "wire", period: "1Y", variants: ["65PLNV50"] },
+  "v50-65-85-wire-2y": { payment: "wire", period: "2Y", variants: ["65PLNV50", "85PLNV50"] },
+  "v50-50-85-cash-2y": { payment: "cash", period: "2Y", variants: ["50PLNV50", "85PLNV50"] },
+  "v50-65-85-125-wire-2y": {
+    payment: "wire", period: "2Y", variants: ["65PLNV50", "85PLNV50", "125PLNV50"],
+  },
+  "v50-50-65-85-cash-1y": {
+    payment: "cash", period: "1Y", variants: ["50PLNV50", "65PLNV50", "85PLNV50"],
+  },
+
   "v50-full-cash-2y": { payment: "cash", period: "2Y", variants: V50_FULL },
   "v50-full-wire-2y": { payment: "wire", period: "2Y", variants: V50_FULL },
   "v50-65-90-140-195-wire-2y": {

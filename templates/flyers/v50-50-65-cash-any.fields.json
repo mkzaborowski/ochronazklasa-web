@@ -1,0 +1,126 @@
+{
+  "payment": "cash",
+  "period": "ANY",
+  "variants": [
+    "50PLNV50",
+    "65PLNV50"
+  ],
+  "fields": [
+    {
+      "name": "Text7",
+      "role": "policy",
+      "idx": 1,
+      "prefixAA": true,
+      "rect": {
+        "x": 160.31,
+        "y": 389.87,
+        "w": 326.95,
+        "h": 58.19
+      },
+      "rozmiar": 18,
+      "kolor": [
+        0.235,
+        0.333,
+        0.643
+      ]
+    },
+    {
+      "name": "Text5",
+      "role": "opiekunPhone",
+      "rect": {
+        "x": 162.48,
+        "y": 80.59,
+        "w": 329.13,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "Text6",
+      "role": "opiekunEmail",
+      "rect": {
+        "x": 162.84,
+        "y": 55.17,
+        "w": 409.1,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "Text1",
+      "role": "school",
+      "rect": {
+        "x": 26.95,
+        "y": 683.47,
+        "w": 539.37,
+        "h": 16.93
+      },
+      "rozmiar": 12,
+      "kolor": [
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "name": "Text4",
+      "role": "opiekunName",
+      "rect": {
+        "x": 33.29,
+        "y": 150.43,
+        "w": 349.03,
+        "h": 19.47
+      },
+      "rozmiar": 15,
+      "kolor": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Text2",
+      "role": "policy",
+      "idx": 0,
+      "prefixAA": true,
+      "rect": {
+        "x": 160.74,
+        "y": 449.9,
+        "w": 326.95,
+        "h": 58.79
+      },
+      "rozmiar": 18,
+      "kolor": [
+        0.235,
+        0.333,
+        0.643
+      ]
+    },
+    {
+      "name": "Text3",
+      "role": "period",
+      "rect": {
+        "x": 324.24,
+        "y": 572.37,
+        "w": 236.12,
+        "h": 17.3
+      },
+      "rozmiar": 12,
+      "kolor": [
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

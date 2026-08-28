@@ -184,9 +184,11 @@ const dobor = [
   // ulotka przypisana wprost do okresu wygrywa z uniwersalną
   [["50PLNV50"], "cash", "1Y", "v50-50-cash-1y"],
   [["50PLNV50"], "cash", "2Y", "v50-50-cash-2y"],
-  // ulotka 50/65 jest tylko dwuletnia - dla polisy rocznej nie ma czego dać
+  // 50/65 gotówka ma teraz dwie ulotki: dwuletnią i uniwersalną. Przy polisie
+  // dwuletniej wygrywa ta przypisana wprost do okresu - drukuje tylko ten wiersz
+  // świadczeń, który dotyczy tej szkoły.
   [["50PLNV50", "65PLNV50"], "cash", "2Y", "v50-50-65-cash-2y"],
-  [["50PLNV50", "65PLNV50"], "cash", "1Y", null],
+  [["50PLNV50", "65PLNV50"], "cash", "1Y", "v50-50-65-cash-any"],
   // niepełny zestaw to nie „prawie pasuje" - ulotka drukuje konkretne składki
   [["50PLNV50", "65PLNV50", "85PLNV50"], "cash", "2Y", null],
   [["50PLNV50", "65PLNV50", "85PLNV50"], "wire", "1Y", "v50-50-65-85-wire-any"],

@@ -76,6 +76,19 @@ export const FLYER_TEMPLATES: FlyerTemplate[] = [
     ["50PLNV50", "65PLNV50", "85PLNV50"]),
   tpl("v50-65-85-125-170-wire-any", "OCHRONA 65/85/125/170 — przelew, 1 rok i 2 lata", "wire", "ANY",
     ["65PLNV50", "85PLNV50", "125PLNV50", "170PLNV50"]),
+
+  // --- dostarczone 28.08.2026 ---
+  tpl("v50-50-65-cash-any", "OCHRONA 50/65 — gotówka, 1 rok i 2 lata", "cash", "ANY",
+    ["50PLNV50", "65PLNV50"]),
+  tpl("v50-65-wire-1y", "OCHRONA 65 — przelew, 1 rok", "wire", "1Y", ["65PLNV50"]),
+  tpl("v50-65-85-wire-2y", "OCHRONA 65/85 — przelew, 2 lata", "wire", "2Y",
+    ["65PLNV50", "85PLNV50"]),
+  tpl("v50-50-85-cash-2y", "OCHRONA 50/85 — gotówka, 2 lata", "cash", "2Y",
+    ["50PLNV50", "85PLNV50"]),
+  tpl("v50-65-85-125-wire-2y", "OCHRONA 65/85/125 — przelew, 2 lata", "wire", "2Y",
+    ["65PLNV50", "85PLNV50", "125PLNV50"]),
+  tpl("v50-50-65-85-cash-1y", "OCHRONA 50/65/85 — gotówka, 1 rok", "cash", "1Y",
+    ["50PLNV50", "65PLNV50", "85PLNV50"]),
 ];
 
 /** Canonical order-independent key for a set of variants. */
