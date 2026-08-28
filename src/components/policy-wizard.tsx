@@ -18,7 +18,7 @@ import {
   type PreviewRow,
 } from "@/lib/actions/issue";
 import { lookupPolicyholder, type PolicyholderMatch } from "@/lib/actions/lookup";
-import { classifyIdentifier } from "@/lib/identifiers";
+import { classifyIdentifier, scalIdentyfikator } from "@/lib/identifiers";
 import { useDebounce } from "@/hooks/use-debounce";
 
 type LookupState = "idle" | "searching" | "found" | "multiple" | "none";
@@ -89,7 +89,7 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
       ...f,
       nazwa: mch.nazwa,
       adres: mch.adres,
-      regonPesel: mch.regonPesel || f.regonPesel,
+      regonPesel: scalIdentyfikator(f.regonPesel, mch.regonPesel),
       telefon: mch.telefon,
       email: mch.email,
       kontaktNazwa: mch.kontaktNazwa || f.kontaktNazwa,
