@@ -98,7 +98,16 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
     }));
     setAgentId(mch.agentId ?? "");
     setAgentName(mch.agentName ?? "");
-    setSourceId(mch.source === "school" ? mch.id : "");
+    // Rekord zapisany niesie WŁASNE powiązanie z katalogiem; rekord katalogu
+    // jest tym powiązaniem sam. Bez tego poprawki wpisane przy ponownym
+    // wystawieniu przestałyby wracać do katalogu.
+    setSourceId(
+      mch.source === "zapisany"
+        ? (mch.sourceSchoolRecordId ?? "")
+        : mch.source === "school"
+          ? mch.id
+          : "",
+    );
     setLookup("found");
     setMatches([]);
   };
@@ -223,7 +232,7 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
                 {lookup === "multiple" && (
                   <div className="rounded-md border">
                     <div className="border-b px-3 py-1.5 text-xs text-muted-foreground">
-                      Znaleziono {matches.length} szkół — wybierz:
+                      Znaleziono {matches.length} — wybierz:
                     </div>
                     <ul className="max-h-56 divide-y overflow-auto">
                       {matches.map((mch) => (
@@ -233,7 +242,21 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
                             onClick={() => applyMatch(mch)}
                             className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-accent"
                           >
-                            <span className="font-medium">{mch.nazwa}</span>
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium">{mch.nazwa}</span>
+                              {/* Skąd pochodzi podpowiedź ma znaczenie: rekord
+                                  zapisany niesie poprawki biura, katalog — dane
+                                  z importu, czasem nieaktualne. */}
+                              {mch.source === "zapisany" ? (
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                                  Twoje dane{mch.ostatnioUzyty ? ` · ${mch.ostatnioUzyty}` : ""}
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                                  z katalogu szkół
+                                </span>
+                              )}
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               {mch.adres} {mch.meta?.type ? `· ${mch.meta.type}` : ""}
                             </span>
