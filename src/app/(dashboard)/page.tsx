@@ -5,7 +5,9 @@ import {
   FileText,
   Link2,
   ShoppingCart,
+  TrendingUp,
   UserCog,
+  Users,
 } from "lucide-react";
 import {
   Card,
@@ -16,6 +18,9 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { pobierzWnioski, type SprzedazAgenta } from "@/lib/online-api";
+import { dopasujAgentow } from "@/lib/agents/atrybucja";
+import { podsumuj, seriaDzienna } from "@/lib/statystyki/dzienne";
+import { WykresKlientow, WykresPrzychodu } from "@/components/wykresy-sprzedazy";
 
 export const dynamic = "force-dynamic";
 
@@ -44,26 +49,19 @@ async function loadStats() {
  */
 async function loadOnline() {
   try {
-    const { statystyki } = await pobierzWnioski();
-    const kody = statystyki.wgAgenta.map((p) => p.kod);
-    const agenci = kody.length
-      ? await db.agent
-          .findMany({
-            where: { OR: [{ code: { in: kody } }, { codeHistory: { hasSome: kody } }] },
-            select: { id: true, name: true, code: true, codeHistory: true },
-          })
-          .catch(() => [])
-      : [];
+    const { wnioski, statystyki } = await pobierzWnioski();
+    // To samo dopasowanie, co na liście sprzedaży — łącznie z rozpoznawaniem
+    // kodów wpisanych z ręki. Gdyby pulpit liczył po swojemu, dwa ekrany obok
+    // siebie pokazywałyby tej samej osobie inną sprzedaż.
+    const dopasowani = await dopasujAgentow(statystyki.wgAgenta.map((p) => p.kod));
 
-    // Sumujemy po AGENCIE, nie po kodzie: agent, który zmienił kod, ma jeden
-    // wiersz, a nie dwa połówkowe.
+    // Sumujemy po AGENCIE, nie po kodzie: agent, który zmienił kod albo dostał
+    // sprzedaż z kodu wpisanego z ręki, ma jeden wiersz, a nie kilka cząstkowych.
     const wgId = new Map<string, { id: string; name: string; sprzedaz: SprzedazAgenta }>();
     const nierozpoznane: SprzedazAgenta[] = [];
 
     for (const pozycja of statystyki.wgAgenta) {
-      const agent = agenci.find(
-        (a) => a.code === pozycja.kod || a.codeHistory.includes(pozycja.kod),
-      );
+      const agent = dopasowani.get(pozycja.kod);
       if (!agent) {
         nierozpoznane.push(pozycja);
         continue;
@@ -79,6 +77,7 @@ async function loadOnline() {
     }
 
     return {
+      wnioski,
       statystyki,
       agenci: [...wgId.values()].sort(
         (a, b) => b.sprzedaz.oplacone - a.sprzedaz.oplacone || b.sprzedaz.wnioski - a.sprzedaz.wnioski,
@@ -90,8 +89,14 @@ async function loadOnline() {
   }
 }
 
+/** Ile dni pokazuje wykres. Miesiąc mieści sezon zapisów i nadal ma czytelną oś. */
+const OKNO_DNI = 30;
+
 export default async function OverviewPage() {
   const [{ values, dbError }, online] = await Promise.all([loadStats(), loadOnline()]);
+
+  const seria = online ? seriaDzienna(online.wnioski, OKNO_DNI) : null;
+  const okres = seria ? podsumuj(seria) : null;
 
   const stats = [
     { label: "Wystawione polisy", value: values[0], icon: FileText, hint: "InterRisk", href: "/schools" },
@@ -129,6 +134,46 @@ export default async function OverviewPage() {
           </Link>
         ))}
       </div>
+
+      {seria && okres ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="space-y-1 pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <TrendingUp className="size-4 text-[var(--blekit)]" />
+                Przychód dzienny
+              </CardTitle>
+              <CardDescription>
+                Opłacona sprzedaż online z ostatnich {OKNO_DNI} dni —{" "}
+                <strong className="font-medium text-foreground">{kwota(okres.przychodZl)} zł</strong>{" "}
+                łącznie, średnio {kwota(okres.sredniaDziennaZl)} zł dziennie.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WykresPrzychodu seria={seria} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="space-y-1 pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Users className="size-4 text-[var(--blekit)]" />
+                Ubezpieczeni narastająco
+              </CardTitle>
+              <CardDescription>
+                Osoby objęte ochroną ze sprzedaży online —{" "}
+                <strong className="font-medium text-foreground">
+                  +{okres.ubezpieczeni}
+                </strong>{" "}
+                w ciągu {OKNO_DNI} dni.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WykresKlientow seria={seria} />
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
 
       {dbError ? (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -180,9 +225,13 @@ export default async function OverviewPage() {
                 ))}
                 {online.nierozpoznane.map((p) => (
                   <li key={p.kod} className="flex items-center justify-between gap-3 py-2">
-                    <span className="text-amber-700" title="Kod nie pasuje do żadnego agenta">
+                    <Link
+                      href="/online"
+                      className="text-amber-700 hover:underline"
+                      title="System nie rozstrzygnął, czyj to kod — przypisz go na liście sprzedaży"
+                    >
                       {p.kod} (nieznany kod)
-                    </span>
+                    </Link>
                     <span className="tabular-nums text-muted-foreground">
                       {p.oplacone} opłaconych z {p.wnioski}
                     </span>

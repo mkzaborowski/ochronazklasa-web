@@ -11,6 +11,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Skrypty w scripts/ uruchamia goły node (--experimental-strip-types),
+    // a ten wymaga rozszerzenia .ts w imporcie. Next kompiluje własne pliki
+    // bundlerem, więc dopuszczenie tego zapisu nic w aplikacji nie zmienia.
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [

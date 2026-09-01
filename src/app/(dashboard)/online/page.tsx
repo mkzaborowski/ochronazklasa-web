@@ -7,7 +7,8 @@ import {
   pobierzWnioski,
   type StatusWniosku,
 } from "@/lib/online-api";
-import { dopasujAgentow } from "@/lib/agents/atrybucja";
+import { dopasujAgentow, kodyDoRozstrzygniecia } from "@/lib/agents/atrybucja";
+import { PrzypiszKod } from "@/components/przypisz-kod";
 import { db } from "@/lib/db";
 import {
   Table,
@@ -60,17 +61,34 @@ export default async function OnlineSalesPage({
 
   // Nazwiska agentów dokładamy tutaj: usługa sprzedaży zna wyłącznie kody.
   const agenci = await dopasujAgentow(dane.wnioski.map((w) => w.kodAgenta));
+  // Do rozstrzygnięcia patrzymy po CAŁEJ sprzedaży, nie po bieżącym filtrze:
+  // kod czekający na decyzję ma być widoczny także wtedy, gdy ktoś akurat
+  // zawęził tabelę do jednego statusu.
+  const doRozstrzygniecia = await kodyDoRozstrzygniecia(
+    dane.statystyki.wgAgenta.map((p) => p.kod),
+  );
   // Wartością filtru są WSZYSTKIE kody agenta, także porzucone — inaczej po
   // zmianie kodu jego dawna sprzedaż wypadałaby z własnego filtru.
   const doFiltru = (
     await db.agent
       .findMany({
         where: { code: { not: null } },
-        select: { name: true, code: true, codeHistory: true },
+        select: { name: true, code: true, codeHistory: true, codeAliases: true },
         orderBy: [{ active: "desc" }, { name: "asc" }],
       })
       .catch(() => [])
-  ).map((a) => ({ name: a.name, wartosc: [a.code!, ...a.codeHistory].join(",") }));
+  ).map((a) => ({
+    name: a.name,
+    wartosc: [a.code!, ...a.codeHistory, ...a.codeAliases].join(","),
+  }));
+
+  // Pełna lista do ręcznego przypisania — także agenci bez kodu, bo brak kodu
+  // nie znaczy, że ta sprzedaż nie jest ich.
+  const wszyscyAgenci = doRozstrzygniecia.length
+    ? await db.agent
+        .findMany({ select: { id: true, name: true }, orderBy: [{ active: "desc" }, { name: "asc" }] })
+        .catch(() => [])
+    : [];
 
   const kafelki = [
     { etykieta: "Wnioski", wartosc: dane.statystyki.wszystkie },
@@ -113,6 +131,31 @@ export default async function OnlineSalesPage({
           </div>
         ))}
       </div>
+
+      {doRozstrzygniecia.length > 0 ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+          <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            {doRozstrzygniecia.length === 1
+              ? "Jeden kod czeka na decyzję"
+              : `${doRozstrzygniecia.length} kody czekają na decyzję`}
+          </h2>
+          <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-200/80">
+            Klient wpisał kod opiekuna z ręki, a system nie umiał rozstrzygnąć, czyj jest —
+            albo pasuje do dwóch osób tak samo dobrze, albo do nikogo. Wskaż agenta:
+            przypisanie działa też wstecz, na sprzedaż, która już się odbyła.
+          </p>
+          <ul className="mt-3 space-y-3">
+            {doRozstrzygniecia.map((k) => (
+              <li key={k.kod} className="flex flex-wrap items-center gap-3">
+                <code className="rounded bg-amber-100 px-2 py-1 font-mono text-sm text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                  {k.kod}
+                </code>
+                <PrzypiszKod kod={k.kod} kandydaci={k.kandydaci} agenci={wszyscyAgenci} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <form className="flex flex-wrap gap-2" method="get">
         <input
@@ -220,18 +263,28 @@ export default async function OnlineSalesPage({
 }
 
 /**
- * Agent przy wniosku. Trzy stany, każdy znaczy co innego:
- *   brak kodu   — klient przyszedł sam, sprzedaż jest niczyja i tak ma zostać,
- *   kod znany   — pokazujemy nazwisko z linkiem do profilu,
- *   kod nieznany— literówka w linku albo agent skasowany; pokazujemy sam kod,
- *                 bo ktoś się o tę sprzedaż upomni i musi być po czym szukać.
+ * Agent przy wniosku. Cztery stany, każdy znaczy co innego:
+ *   brak kodu    — klient przyszedł sam, sprzedaż jest niczyja i tak ma zostać,
+ *   kod znany    — pokazujemy nazwisko z linkiem do profilu,
+ *   kod rozpoznany— kodu nie ma w bazie, ale pasuje do nazwiska jednej osoby
+ *                  (MARCELMOTYCKI → Marcel Motycki). Mówimy o tym WPROST, bo
+ *                  to jest wniosek systemu, a nie fakt z bazy — i ktoś musi
+ *                  móc go zakwestionować, patrząc na tę tabelę.
+ *   kod nieznany — literówka, agent skasowany albo dwoje o tym samym nazwisku;
+ *                  pokazujemy sam kod, bo ktoś się o tę sprzedaż upomni.
  */
 function Agent({
   kod,
   dopasowany,
 }: {
   kod: string | null;
-  dopasowany?: { id: string; name: string; active: boolean; poprzedniKod: boolean };
+  dopasowany?: {
+    id: string;
+    name: string;
+    active: boolean;
+    poprzedniKod: boolean;
+    rozpoznany?: { pewnosc: number; powod: string };
+  };
 }) {
   if (!kod) return <span className="text-muted-foreground">bez rekomendacji</span>;
   if (!dopasowany) {
@@ -247,6 +300,14 @@ function Agent({
       {dopasowany.poprzedniKod ? (
         <span className="ml-1 text-xs text-muted-foreground" title={`stary kod: ${kod}`}>
           (stary kod)
+        </span>
+      ) : null}
+      {dopasowany.rozpoznany ? (
+        <span
+          className="ml-1 text-xs text-muted-foreground"
+          title={`Kod ${kod} nie jest zapisany w bazie — ${dopasowany.rozpoznany.powod}. Aby przypisać go na stałe, otwórz profil agenta.`}
+        >
+          (rozpoznany z {kod})
         </span>
       ) : null}
     </Link>

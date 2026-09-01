@@ -1,0 +1,17 @@
+-- Kody opiekuna przypisane do agenta RĘCZNIE przez administratora.
+--
+-- Kod z linku polecającego zawsze zgadza się z bazą. Kod wpisany z ręki w polu
+-- „kod opiekuna" - już nie: agent Marcel Motycki ma kod MMOTYCKI, a klient
+-- wpisał MARCELMOTYCKI. System takie kody rozpoznaje sam (patrz
+-- src/lib/agents/rozpoznawanie.ts), ale rozpoznanie jest ZGADYWANIEM liczonym
+-- na bieżąco i celowo nie zapisuje się do bazy.
+--
+-- Tutaj lądują dopiero decyzje CZŁOWIEKA: gdy kod pasuje do dwóch osób równie
+-- dobrze albo do nikogo, administrator wskazuje właściciela i od tej chwili
+-- dopasowanie jest dokładne, nie zgadywane.
+--
+-- Osobna kolumna, a nie dopisanie do "codeHistory": tam leżą kody, których
+-- agent UŻYWAŁ wcześniej. Wrzucenie tu aliasu kłamałoby o historii - panel
+-- pisze o nich „wcześniejsze kody nadal działają", a MARCELMOTYCKI nigdy nie
+-- był kodem tego agenta.
+ALTER TABLE "Agent" ADD COLUMN "codeAliases" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

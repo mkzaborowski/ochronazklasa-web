@@ -16,8 +16,12 @@ const nn = (v?: string) => (v && v.trim() !== "" ? v.trim() : null);
  * przez kogoś innego, sprzedaż sprzed lat trafiłaby do niewłaściwej osoby.
  */
 async function zajeteKody(): Promise<string[]> {
-  const agenci = await db.agent.findMany({ select: { code: true, codeHistory: true } });
-  return agenci.flatMap((a) => [a.code, ...a.codeHistory]).filter((k): k is string => Boolean(k));
+  const agenci = await db.agent.findMany({
+    select: { code: true, codeHistory: true, codeAliases: true },
+  });
+  return agenci
+    .flatMap((a) => [a.code, ...a.codeHistory, ...a.codeAliases])
+    .filter((k): k is string => Boolean(k));
 }
 
 export async function createAgent(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -153,4 +157,114 @@ export async function assignSchoolAgent(schoolRecordId: string, agentId: string 
     metadata: { agentId },
   });
   revalidatePath("/directory");
+}
+
+/**
+ * Przypisuje kod opiekuna do agenta RĘCZNIE.
+ *
+ * Ostatnie słowo, gdy rozpoznawanie mówi „nie wiem": kod pasuje do dwóch osób
+ * równie dobrze (dwoje agentów o tym samym nazwisku) albo do nikogo, bo klient
+ * wpisał coś po swojemu. Zapisany kod przestaje być zgadywany — od tej chwili
+ * jest dopasowaniem dokładnym i liczy się agentowi wszędzie: w panelu,
+ * w jego portalu i w powiadomieniach o sprzedaży.
+ *
+ * Działa też WSTECZ. Wnioski trzymają sam kod, a nazwisko dokładamy przy
+ * wyświetlaniu — więc jedno przypisanie naprawia całą dotychczasową historię
+ * tego kodu, nie tylko przyszłą sprzedaż.
+ */
+export async function przypiszKodAgentowi(surowyKod: string, agentId: string) {
+  const user = await requireRole(["ADMIN"]);
+  const kod = normalizujKod(surowyKod);
+  if (!kod) return { error: "Nieprawidłowy kod." };
+
+  const agent = await db.agent.findUnique({
+    where: { id: agentId },
+    select: { id: true, name: true, code: true, codeHistory: true, codeAliases: true },
+  });
+  if (!agent) return { error: "Nie znaleziono agenta." };
+
+  // Kod, który jest już czyimś kodem właściwym lub historycznym, NIE może zostać
+  // przypisany komu innemu: sprzedaż sprzed lat przeniosłaby się na inną osobę.
+  const wlasciciel = await db.agent.findFirst({
+    where: {
+      id: { not: agentId },
+      OR: [{ code: kod }, { codeHistory: { has: kod } }, { codeAliases: { has: kod } }],
+    },
+    select: { name: true },
+  });
+  if (wlasciciel) return { error: `Kod ${kod} należy już do agenta ${wlasciciel.name}.` };
+
+  if (agent.code === kod || agent.codeHistory.includes(kod) || agent.codeAliases.includes(kod)) {
+    return { ok: true };
+  }
+
+  await db.agent.update({
+    where: { id: agentId },
+    data: { codeAliases: { push: kod } },
+  });
+  await logAudit({
+    userId: user.id,
+    action: "agent.assignCode",
+    entity: "Agent",
+    entityId: agentId,
+    metadata: { kod },
+  });
+  revalidatePath("/online");
+  revalidatePath("/");
+  revalidatePath(`/agents/${agentId}`);
+  return { ok: true };
+}
+
+/**
+ * Odpina kod przypisany ręcznie. Pomyłka przy przypisywaniu jest cicha —
+ * wiersz po prostu wygląda normalnie, tylko przy złym nazwisku — więc musi
+ * dać się cofnąć równie łatwo, jak się ją zrobiło.
+ *
+ * Odpiąć da się WYŁĄCZNIE kod przypisany ręcznie. Kod właściwy i historyczny
+ * zostają: to nie są zgadywania, tylko kody, które agent faktycznie miał.
+ */
+export async function odepnijKodAgenta(surowyKod: string, agentId: string) {
+  const user = await requireRole(["ADMIN"]);
+  const kod = normalizujKod(surowyKod);
+  if (!kod) return { error: "Nieprawidłowy kod." };
+
+  const agent = await db.agent.findUnique({
+    where: { id: agentId },
+    select: { codeAliases: true },
+  });
+  if (!agent) return { error: "Nie znaleziono agenta." };
+  if (!agent.codeAliases.includes(kod)) {
+    return { error: `Kod ${kod} nie jest przypisany ręcznie do tego agenta.` };
+  }
+
+  await db.agent.update({
+    where: { id: agentId },
+    data: { codeAliases: agent.codeAliases.filter((k) => k !== kod) },
+  });
+  await logAudit({
+    userId: user.id,
+    action: "agent.unassignCode",
+    entity: "Agent",
+    entityId: agentId,
+    metadata: { kod },
+  });
+  revalidatePath("/online");
+  revalidatePath("/");
+  revalidatePath(`/agents/${agentId}`);
+  return { ok: true };
+}
+
+/**
+ * Wersja dla formularza z listą agentów (ekran „kody do rozstrzygnięcia").
+ * Kod przychodzi przez `bind`, bo jest częścią tożsamości wiersza, a nie
+ * czymś, co administrator wpisuje — wybiera wyłącznie osobę.
+ */
+export async function przypiszKodZFormularza(
+  kod: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const agentId = String(formData.get("agentId") ?? "").trim();
+  if (!agentId) return { error: "Wybierz agenta." };
+  return przypiszKodAgentowi(kod, agentId);
 }

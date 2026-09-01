@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth-helpers";
-import { kodyAgenta } from "@/lib/agents/atrybucja";
+import { kodySprzedazyAgenta } from "@/lib/agents/atrybucja";
+import { pobierzKodyWSprzedazy } from "@/lib/online-api";
 import { wszystkiePolisy, type WynikPolis } from "@/lib/polisy/wszystkie";
 
 /**
@@ -23,6 +24,7 @@ export interface KartaAgenta {
   phone: string | null;
   code: string | null;
   codeHistory: string[];
+  codeAliases: string[];
   active: boolean;
   powiadomieniaEmail: boolean;
 }
@@ -54,6 +56,7 @@ export async function kartaZalogowanegoAgenta(): Promise<KartaAgenta | typeof BR
             phone: true,
             code: true,
             codeHistory: true,
+            codeAliases: true,
             active: true,
             powiadomieniaEmail: true,
           },
@@ -87,7 +90,15 @@ export interface PortalAgenta {
 
 /** Komplet danych portalu dla jednej karty agenta. */
 export async function daneAgenta(karta: KartaAgenta): Promise<PortalAgenta> {
-  const kody = kodyAgenta(karta);
+  // Kody agenta POWIĘKSZONE o te, które rozpoznajemy jako jego (kod wpisany
+  // z ręki nie jest kanoniczny). Bez tego agent widziałby u siebie mniej
+  // sprzedaży, niż panel administratora przypisuje mu na ekranie obok —
+  // a dwie różne prawdy o tej samej sprzedaży to najgorszy możliwy wariant.
+  // Awaria usługi sprzedaży nie może zabrać agentowi jego własnych kodów,
+  // więc cofamy się wtedy do samych dokładnych.
+  const kody = await pobierzKodyWSprzedazy()
+    .then((wSprzedazy) => kodySprzedazyAgenta(karta, wSprzedazy))
+    .catch(() => kodySprzedazyAgenta(karta, []));
 
   const [szkolySurowe, polisy] = await Promise.all([
     db.school

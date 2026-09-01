@@ -9,7 +9,7 @@ import { AgentActiveToggle } from "@/components/agent-active-toggle";
 import { AgentLink } from "@/components/agent-link";
 import { AgentQr } from "@/components/agent-qr";
 import { linkPolecajacy } from "@/lib/agents/kod";
-import { kodyAgenta } from "@/lib/agents/atrybucja";
+import { kodyAgenta, kodySprzedazyAgenta } from "@/lib/agents/atrybucja";
 import { qrSvgAgenta } from "@/lib/agents/qr";
 import { pobierzWnioski } from "@/lib/online-api";
 
@@ -18,24 +18,36 @@ export const dynamic = "force-dynamic";
 /**
  * Sprzedaż online tego agenta.
  *
- * Liczymy po WSZYSTKICH jego kodach, także porzuconych — zmiana kodu nie może
- * skasować mu dorobku. Awaria usługi sprzedaży nie może zaś przewrócić profilu
- * agenta, więc błąd kończy się brakiem kafelków, a nie białą stroną.
+ * Liczymy po WSZYSTKICH jego kodach: aktualnym, porzuconych, przypisanych
+ * ręcznie i tych ROZPOZNANYCH — kod wpisany z ręki rzadko jest kanoniczny,
+ * a sprzedaż, którą panel przypisuje mu na liście, musi tu dać tę samą liczbę.
+ * Awaria usługi sprzedaży nie może przewrócić profilu agenta, więc błąd kończy
+ * się brakiem kafelków, a nie białą stroną.
  */
-async function sprzedazOnline(agent: { code: string | null; codeHistory: string[] }) {
-  const kody = new Set(kodyAgenta(agent));
-  if (kody.size === 0) return null;
+async function sprzedazOnline(agent: {
+  id: string;
+  code: string | null;
+  codeHistory: string[];
+  codeAliases: string[];
+}) {
+  if (kodyAgenta(agent).length === 0) return null;
   try {
     const { statystyki } = await pobierzWnioski();
-    const moje = statystyki.wgAgenta.filter((p) => kody.has(p.kod));
-    return moje.reduce(
-      (suma, p) => ({
-        wnioski: suma.wnioski + p.wnioski,
-        oplacone: suma.oplacone + p.oplacone,
-        przychodZl: suma.przychodZl + p.przychodZl,
-      }),
-      { wnioski: 0, oplacone: 0, przychodZl: 0 },
+    const kody = new Set(
+      await kodySprzedazyAgenta(agent, statystyki.wgAgenta.map((p) => p.kod)),
     );
+    const moje = statystyki.wgAgenta.filter((p) => kody.has(p.kod));
+    return {
+      kody: [...kody],
+      ...moje.reduce(
+        (suma, p) => ({
+          wnioski: suma.wnioski + p.wnioski,
+          oplacone: suma.oplacone + p.oplacone,
+          przychodZl: suma.przychodZl + p.przychodZl,
+        }),
+        { wnioski: 0, oplacone: 0, przychodZl: 0 },
+      ),
+    };
   } catch {
     return null;
   }
@@ -90,7 +102,7 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ i
           value={online?.oplacone ?? 0}
           href={
             agent.code
-              ? `/online?agent=${encodeURIComponent(kodyAgenta(agent).join(","))}`
+              ? `/online?agent=${encodeURIComponent((online?.kody ?? kodyAgenta(agent)).join(","))}`
               : undefined
           }
         />
@@ -129,6 +141,13 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ i
                 <p className="text-xs text-muted-foreground">
                   Wcześniejsze kody ({agent.codeHistory.join(", ")}) nadal działają dla sprzedaży,
                   która już się odbyła, ale rozdawaj wyłącznie link powyżej.
+                </p>
+              ) : null}
+              {agent.codeAliases.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Przypisane ręcznie: {agent.codeAliases.join(", ")}. To kody wpisane przez
+                  klientów z ręki, które ktoś z biura wskazał jako należące do tego agenta.
+                  Liczą się do jego sprzedaży, ale nie są linkiem do rozdawania.
                 </p>
               ) : null}
             </>

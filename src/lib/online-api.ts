@@ -134,6 +134,22 @@ export const pobierzWnioski = (
   );
 };
 
+/**
+ * Same kody opiekuna, jakie w ogóle występują w sprzedaży.
+ *
+ * Potrzebne, żeby rozpoznać kody wpisane z ręki (MARCELMOTYCKI zamiast
+ * MMOTYCKI) po stronie panelu — bez tej listy nie wiadomo, czego szukać.
+ *
+ * Statystyki liczą się ZAWSZE z całości, niezależnie od filtru, więc bierzemy
+ * najwęższy możliwy wycinek wniosków: `BEZ_AGENTA` to sprzedaż nieprzypisana
+ * nikomu, czyli jedyna, której portal agenta i tak nigdy nie pokazuje. Pobrane
+ * wnioski wyrzucamy — interesuje nas wyłącznie rozbicie `wgAgenta`.
+ */
+export const pobierzKodyWSprzedazy = async (): Promise<string[]> => {
+  const { statystyki } = await pobierzWnioski({ agent: BEZ_AGENTA });
+  return statystyki.wgAgenta.map((p) => p.kod);
+};
+
 export const pobierzWniosek = (id: string) =>
   zapytaj<WniosekPelny>(`/api/admin/applications/${encodeURIComponent(id)}`);
 

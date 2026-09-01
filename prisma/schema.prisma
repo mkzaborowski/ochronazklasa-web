@@ -318,6 +318,10 @@ model Agent {
   // ktore juz sie odbyly - wnioski trzymaja kod z chwili zakupu, a nie
   // wskaznik na agenta (baza sprzedazy to osobna usluga).
   codeHistory String[] @default([])
+  // Kody przypisane RECZNIE przez administratora - kod wpisany z reki
+  // (MARCELMOTYCKI zamiast MMOTYCKI), ktorego system nie umial rozstrzygnac sam.
+  // Osobno od codeHistory, bo tamto znaczy "kody, ktorych agent uzywal".
+  codeAliases String[] @default([])
   active      Boolean  @default(true)
   // Powiadomienie mailem o sprzedazy z wlasnego kodu. Domyslnie wlaczone -
   // agent, ktory nie wie, ze cos sprzedal, nie zadzwoni do klienta.
