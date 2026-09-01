@@ -28,6 +28,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      # Rozpoznawanie kodów opiekuna decyduje, KOMU liczy się sprzedaż.
+      # Próg pewności i margines nad drugim kandydatem to dwie liczby, których
+      # skutków nie widać w typach - dopiero lista przypadków pokazuje, co
+      # system ma łapać i czego ma NIE zgadywać.
+      - run: npm run check:kody
       - run: npm run check:numeracja
       # check:ulotki czyta tekst gotowego PDF-a, żeby sprawdzić, co NAPRAWDĘ
       # wyszło na wydruku - do tego potrzebny jest pdftotext z poppler-utils.

@@ -223,14 +223,19 @@ export default async function OnlineSalesPage({
                   </Link>
                   <div className="text-xs text-muted-foreground">{w.oplacajacy.email}</div>
                 </TableCell>
-                <TableCell>
-                  {w.ubezpieczeni.length} × {w.wariant.skladka ?? "?"} zł
+                {/* Lista ubezpieczonych bywa długa i MA się łamać. Komórki
+                    tabeli mają domyślnie whitespace-nowrap, przez co jedno
+                    nazwisko więcej rozpychało całą tabelę w bok. */}
+                <TableCell className="whitespace-normal">
+                  <span className="whitespace-nowrap">
+                    {w.ubezpieczeni.length} × {w.wariant.skladka ?? "?"} zł
+                  </span>
                   <div className="text-xs text-muted-foreground">
                     {w.ubezpieczeni.map((u) => `${u.imie} ${u.nazwisko}`).join(", ")}
                   </div>
                 </TableCell>
                 <TableCell className="whitespace-nowrap font-medium">{kwota(w.kwotaZl)} zł</TableCell>
-                <TableCell className="text-sm">
+                <TableCell className="text-sm whitespace-normal">
                   <Agent kod={w.kodAgenta} dopasowany={agenci.get(w.kodAgenta ?? "")} />
                 </TableCell>
                 <TableCell>
@@ -295,21 +300,26 @@ function Agent({
     );
   }
   return (
-    <Link href={`/agents/${dopasowany.id}`} className="hover:underline">
-      {dopasowany.name}
+    <>
+      <Link href={`/agents/${dopasowany.id}`} className="whitespace-nowrap hover:underline">
+        {dopasowany.name}
+      </Link>
+      {/* Dopisek idzie POD nazwisko, jak e-mail pod nazwiskiem klienta w kolumnie
+          obok. W jednej linii z nazwiskiem rozciągał tę kolumnę o kilkaset
+          pikseli i to on wypychał całą tabelę poza ekran. */}
       {dopasowany.poprzedniKod ? (
-        <span className="ml-1 text-xs text-muted-foreground" title={`stary kod: ${kod}`}>
-          (stary kod)
-        </span>
+        <div className="text-xs text-muted-foreground" title={`stary kod: ${kod}`}>
+          stary kod
+        </div>
       ) : null}
       {dopasowany.rozpoznany ? (
-        <span
-          className="ml-1 text-xs text-muted-foreground"
-          title={`Kod ${kod} nie jest zapisany w bazie — ${dopasowany.rozpoznany.powod}. Aby przypisać go na stałe, otwórz profil agenta.`}
+        <div
+          className="text-xs text-muted-foreground"
+          title={`Kod ${kod} nie jest zapisany w bazie — ${dopasowany.rozpoznany.powod}. Żeby przypisać go na stałe, użyj karty nad tabelą albo profilu agenta.`}
         >
-          (rozpoznany z {kod})
-        </span>
+          rozpoznany z {kod}
+        </div>
       ) : null}
-    </Link>
+    </>
   );
 }

@@ -30,7 +30,15 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <SidebarInset>
+      {/* min-w-0 NIE jest kosmetyką. SidebarInset jest elementem flex, a taki
+          ma domyślnie min-width:auto - czyli nie skurczy się poniżej szerokości
+          swojej treści. Szeroka tabela rozpychała więc całą kolumnę z treścią
+          ponad szerokość okna: poziomy pasek pojawiał się na CAŁEJ stronie
+          (razem z górną belką), a kontener tabeli, który ma własne
+          overflow-x:auto, mieścił się w tak rozdmuchanym rodzicu i nigdy nie
+          uznawał, że ma co przewijać. Dopiero min-w-0 pozwala kolumnie zmieścić
+          się w oknie i przerzuca przewijanie tam, gdzie ma być: do tabeli. */}
+      <SidebarInset className="min-w-0">
         {/* Belka zostaje na wierzchu przy przewijaniu — przy tabeli na kilkaset
             wierszy przycisk zwijania menu inaczej ucieka poza ekran. */}
         <header className="szklo-belka sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-4">
@@ -40,7 +48,7 @@ export default async function DashboardLayout({
             Panel zarządzania polisami
           </span>
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
