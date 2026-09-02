@@ -23,7 +23,8 @@
     "fix-flyer-duplicates": "node scripts/napraw-zdublowane-pola.mjs",
     "agenci:kody": "node --env-file=.env scripts/nadaj-kody-agentom.mjs",
     "konto-agenta": "node --env-file=.env scripts/konto-agenta.mjs",
-    "check:kody": "node --experimental-strip-types scripts/sprawdz-rozpoznawanie.ts"
+    "check:kody": "node --experimental-strip-types scripts/sprawdz-rozpoznawanie.ts",
+    "check:nazwy": "node --experimental-strip-types scripts/sprawdz-nazwy-plikow.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

@@ -33,6 +33,10 @@ jobs:
       # skutków nie widać w typach - dopiero lista przypadków pokazuje, co
       # system ma łapać i czego ma NIE zgadywać.
       - run: npm run check:kody
+      # Nazwy plików polis: reguły są z Windows (znaki zakazane, kropka na
+      # końcu, limit długości) i żadnej z nich nie widać w typach. Złamana
+      # kończy się plikiem, którego biuro nie zapisze.
+      - run: npm run check:nazwy
       - run: npm run check:numeracja
       # check:ulotki czyta tekst gotowego PDF-a, żeby sprawdzić, co NAPRAWDĘ
       # wyszło na wydruku - do tego potrzebny jest pdftotext z poppler-utils.

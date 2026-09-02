@@ -14,6 +14,7 @@ import {
   type VariantCode,
 } from "@/lib/interrisk/variants";
 import { buildFieldData, formatIssueDate, generatePolicyDocx } from "@/lib/interrisk/generate";
+import { nazwaPlikuPolisy } from "@/lib/interrisk/nazwa-pliku";
 
 export type PreviewRow =
   | { variantCode: VariantCode; label: string; accountNumber: string; policyNumber: string; error?: undefined }
@@ -228,9 +229,25 @@ export async function updatePolicyFile(
     return { error: "Plik musi być w formacie .docx" };
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
+  // Nazwa NIE bierze się z wgranego pliku. Jest jedna reguła nazywania polis -
+  // szkoła, wariant, numer - i podmiana treści jej nie zmienia. Inaczej panel
+  // pokazywałby nazwę z dysku osoby wgrywającej, a pobranie dawałoby inną.
+  const biezaca = await db.generatedPolicy.findUnique({
+    where: { id: policyId },
+    select: { variantCode: true, policyNumber: true, school: { select: { nazwa: true } } },
+  });
   const policy = await db.generatedPolicy.update({
     where: { id: policyId },
-    data: { fileData: bytes, fileName: file.name },
+    data: {
+      fileData: bytes,
+      fileName: biezaca
+        ? nazwaPlikuPolisy({
+            szkola: biezaca.school?.nazwa,
+            wariant: biezaca.variantCode,
+            numerPolisy: biezaca.policyNumber,
+          })
+        : file.name,
+    },
   });
   await logAudit({
     userId: user.id,

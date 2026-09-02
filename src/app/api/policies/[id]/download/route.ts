@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { nazwaPlikuPolisy } from "@/lib/interrisk/nazwa-pliku";
 
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -19,13 +20,25 @@ export async function GET(
   }
 
   const { id } = await params;
-  const policy = await db.generatedPolicy.findUnique({ where: { id } });
+  const policy = await db.generatedPolicy.findUnique({
+    where: { id },
+    include: { school: { select: { nazwa: true } } },
+  });
   if (!policy) return new Response("Not found", { status: 404 });
+
+  // Nazwę składamy TUTAJ, z danych w bazie, a nie bierzemy zapisanej przy
+  // tworzeniu. Dzięki temu polisy wystawione wcześniej - a jest ich
+  // kilkadziesiąt - też pobierają się już z nazwą szkoły, bez ruszania bazy.
+  const nazwa = nazwaPlikuPolisy({
+    szkola: policy.school?.nazwa,
+    wariant: policy.variantCode,
+    numerPolisy: policy.policyNumber,
+  });
 
   return new Response(new Uint8Array(policy.fileData), {
     headers: {
       "Content-Type": DOCX_MIME,
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(policy.fileName)}`,
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(nazwa)}`,
       "Cache-Control": "private, no-store",
     },
   });

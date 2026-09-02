@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { nazwaPlikuPolisy } from "@/lib/interrisk/nazwa-pliku";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Download, FileText } from "lucide-react";
 import { db } from "@/lib/db";
@@ -166,7 +167,16 @@ export default async function SchoolProfilePage({
                     >
                       <Download className="size-4" /> Pobierz
                     </Button>
-                    <PolicyEditDialog policyId={p.id} fileName={p.fileName} />
+                    {/* Ta sama reguła nazwy, co przy pobieraniu — inaczej panel
+                        pokazywałby jedno, a pobrany plik nazywałby się inaczej. */}
+                    <PolicyEditDialog
+                      policyId={p.id}
+                      fileName={nazwaPlikuPolisy({
+                        szkola: school.nazwa,
+                        wariant: p.variantCode,
+                        numerPolisy: p.policyNumber,
+                      })}
+                    />
                   </div>
                 </CardContent>
               </Card>

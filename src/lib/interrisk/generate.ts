@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { renderDocx } from "@/lib/documents/docx";
 import { POLICY_VARIANTS, policyNumberFromAccount, type VariantCode } from "@/lib/interrisk/variants";
+import { nazwaPlikuPolisy } from "@/lib/interrisk/nazwa-pliku";
 
 /** Data injected into every policy template (only these fields are touched). */
 export type PolicyFieldData = {
@@ -79,6 +80,12 @@ export async function generatePolicyDocx(
 ): Promise<{ bytes: Buffer; fileName: string }> {
   const template = await loadTemplate(code);
   const bytes = renderDocx(template, fields);
-  const fileName = `${code}_${fields.numer_polisy || "polisa"}.docx`;
+  // Nazwa ubezpieczającego to nazwa placówki - mamy ją tutaj bez dodatkowego
+  // zapytania, bo jest jednym z pól drukowanych na samej polisie.
+  const fileName = nazwaPlikuPolisy({
+    szkola: fields.ubezpieczajacy_nazwa,
+    wariant: code,
+    numerPolisy: fields.numer_polisy,
+  });
   return { bytes, fileName };
 }
