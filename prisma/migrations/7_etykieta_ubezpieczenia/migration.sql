@@ -1,0 +1,16 @@
+-- „Ubezpieczenie dla" — krótka nazwa, którą biuro wpisuje przy wystawianiu.
+--
+-- DWA PROBLEMY, JEDNO POLE:
+--
+-- 1. Nazwy placówek są długie („Szkoła Podstawowa nr 5 im. Bohaterów Westerplatte
+--    w Słupsku"), a w nazwie pliku liczy się to, co da się przeczytać jednym
+--    rzutem oka: „SP 5 Słupsk".
+--
+-- 2. Ubezpieczającym bywa fundacja, a ochrona dotyczy KONKRETNEJ SZKOŁY. Dotąd
+--    z panelu nie dało się odczytać której - wszystkie takie polisy wyglądały
+--    identycznie, bo różniły się wyłącznie numerem.
+--
+-- Pole jest OPCJONALNE i niczego nie zastępuje w dokumencie: na polisie
+-- i w bazie nadal stoi pełna nazwa ubezpieczającego. To etykieta dla ludzi -
+-- do nazwy pliku i do rozpoznania wiersza na ekranie.
+ALTER TABLE "School" ADD COLUMN "etykieta" TEXT;

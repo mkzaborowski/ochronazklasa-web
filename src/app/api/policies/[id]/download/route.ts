@@ -22,7 +22,7 @@ export async function GET(
   const { id } = await params;
   const policy = await db.generatedPolicy.findUnique({
     where: { id },
-    include: { school: { select: { nazwa: true } } },
+    include: { school: { select: { nazwa: true, etykieta: true } } },
   });
   if (!policy) return new Response("Not found", { status: 404 });
 
@@ -30,6 +30,7 @@ export async function GET(
   // tworzeniu. Dzięki temu polisy wystawione wcześniej - a jest ich
   // kilkadziesiąt - też pobierają się już z nazwą szkoły, bez ruszania bazy.
   const nazwa = nazwaPlikuPolisy({
+    etykieta: policy.school?.etykieta,
     szkola: policy.school?.nazwa,
     wariant: policy.variantCode,
     numerPolisy: policy.policyNumber,

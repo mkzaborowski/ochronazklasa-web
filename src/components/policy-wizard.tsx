@@ -25,6 +25,8 @@ type LookupState = "idle" | "searching" | "found" | "multiple" | "none";
 
 type Form = {
   nazwa: string;
+  /** „Ubezpieczenie dla" — krótka nazwa do plików; opcjonalna */
+  etykieta: string;
   adres: string;
   regonPesel: string;
   telefon: string;
@@ -36,6 +38,7 @@ type Form = {
 
 const EMPTY: Form = {
   nazwa: "",
+  etykieta: "",
   adres: "",
   regonPesel: "",
   telefon: "",
@@ -271,6 +274,36 @@ export function PolicyWizard({ agents }: { agents: { id: string; name: string }[
               <Field label="Nazwa szkoły / osoby" required>
                 <Input value={form.nazwa} onChange={set("nazwa")} />
               </Field>
+              {/* Skrót do nazw plików. Osobne pole, a nie skracanie nazwy
+                  automatycznie: „SP 5 Słupsk" da się wymyślić tylko człowiekowi,
+                  a przy polisie na fundację to jedyne miejsce, w którym w ogóle
+                  zapisuje się, której szkoły ochrona dotyczy. */}
+              <div className="grid gap-2">
+                <Label htmlFor="etykieta">Ubezpieczenie dla</Label>
+                <Input
+                  id="etykieta"
+                  value={form.etykieta}
+                  onChange={set("etykieta")}
+                  maxLength={70}
+                  placeholder="np. SP 5 Słupsk"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Krótka nazwa do plików — tak nazwie się pobrana polisa i ulotka
+                  {form.etykieta.trim() ? (
+                    <>
+                      :{" "}
+                      <span className="font-mono text-foreground">
+                        {form.etykieta.trim()}_65pln50_679857.docx
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      . Puste pole = pełna nazwa ubezpieczającego, jak dotąd.
+                    </>
+                  )}
+                  {" "}Gdy polisa idzie na fundację, wpisz tu szkołę, której dotyczy.
+                </p>
+              </div>
               <Field label="Adres" required>
                 <Input value={form.adres} onChange={set("adres")} />
               </Field>
@@ -534,6 +567,12 @@ function Review({
         <h3 className="font-medium">Ubezpieczający</h3>
         <dl className="grid grid-cols-[140px_1fr] gap-x-3 gap-y-0.5 text-muted-foreground">
           <dt>Nazwa</dt><dd className="text-foreground">{form.nazwa}</dd>
+          {form.etykieta.trim() ? (
+            <>
+              <dt>Ubezpieczenie dla</dt>
+              <dd className="text-foreground">{form.etykieta.trim()}</dd>
+            </>
+          ) : null}
           <dt>Adres</dt><dd className="text-foreground">{form.adres}</dd>
           <dt>REGON/PESEL</dt><dd className="text-foreground">{form.regonPesel}</dd>
           <dt>Telefon</dt><dd className="text-foreground">{form.telefon}</dd>

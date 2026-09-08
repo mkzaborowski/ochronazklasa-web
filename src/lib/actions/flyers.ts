@@ -11,6 +11,7 @@ import {
   displayPeriod,
 } from "@/lib/flyers/flyer-template-registry";
 import { generateFlyerPdf } from "@/lib/flyers/generate-flyer";
+import { nazwaPlikuUlotki } from "@/lib/interrisk/nazwa-pliku";
 import type { PaymentType } from "@/lib/flyers/flyer-types";
 
 export type FlyerActionState = { error?: string; ok?: boolean };
@@ -69,7 +70,13 @@ export async function generateFlyer(
       opiekun: { name: school.agent.name, phone: school.agent.phone ?? "", email: school.agent.email },
     });
     bytes = doc.bytes;
-    fileName = doc.fileName;
+    // Jedna reguła nazywania dla polis i ulotek — ta sama etykieta z jednego
+    // pola przy wystawianiu opisuje oba dokumenty.
+    fileName = nazwaPlikuUlotki({
+      etykieta: school.etykieta,
+      szkola: school.nazwa,
+      szablon: tpl.key,
+    });
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Nie udało się wygenerować ulotki." };
   }

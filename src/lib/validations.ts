@@ -60,6 +60,10 @@ export const schoolSchema = z.object({
   kontaktNazwa: z.string().trim().min(1, "Nazwa kontaktu jest wymagana"),
   kontaktTelefon: z.string().trim().min(1, "Telefon kontaktu jest wymagany"),
   kontaktEmail: z.string().trim().email("Nieprawidłowy email kontaktu"),
+  // „Ubezpieczenie dla" — opcjonalny skrót do nazw plików i do rozpoznania,
+  // której szkoły dotyczy polisa wystawiona na fundację. Limit jest po to,
+  // żeby nie wjechał tu opis, którego i tak nie da się użyć w nazwie pliku.
+  etykieta: z.string().trim().max(70, "Skrót może mieć najwyżej 70 znaków").optional().or(z.literal("")),
 });
 
 export const issuePolicySchema = schoolSchema.extend({

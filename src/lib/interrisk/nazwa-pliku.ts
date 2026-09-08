@@ -7,7 +7,14 @@
  * szkoły ta polisa należy. Ta nazwa jest w bazie od początku — nie ma powodu,
  * żeby ktokolwiek przepisywał ją ręcznie przy każdej polisie.
  *
- * NAZWA SZKOŁY IDZIE NA POCZĄTEK. W katalogu pobranych plików to ona jest tym,
+ * ETYKIETA WYGRYWA Z NAZWĄ. Biuro może wpisać przy wystawianiu krótkie
+ * „Ubezpieczenie dla" — i wtedy w nazwie pliku stoi ono, a nie pełna nazwa
+ * z dokumentu. Dwa powody, oba z praktyki: „Szkoła Podstawowa nr 5 im.
+ * Bohaterów Westerplatte w Słupsku" nie daje się przeczytać rzutem oka, a przy
+ * polisie wystawionej na fundację pełna nazwa mówi „Fundacja IN ALTUM" — czyli
+ * nie mówi nic o tym, której szkoły dotyczy ochrona.
+ *
+ * NAZWA IDZIE NA POCZĄTEK. W katalogu pobranych plików to ona jest tym,
  * czego się szuka i po czym się sortuje; wariant i numer są dopiskiem
  * odróżniającym polisy tej samej szkoły. Odwrotna kolejność grupowałaby pliki
  * po wariancie, czyli po rzeczy, która nikogo nie interesuje przy szukaniu.
@@ -23,7 +30,6 @@
  * Myślnik i spacja ZOSTAJĄ: „Zespół Szkolno-Przedszkolny" ma się czytać tak,
  * jak się nazywa, a oba znaki są w nazwie pliku całkowicie legalne.
  */
-// eslint-disable-next-line no-control-regex
 const ZAKAZANE = /[<>:"/\\|?*\u0000-\u001f]/g;
 
 /**
@@ -54,7 +60,9 @@ function skroc(tekst: string, maks: number): string {
 }
 
 export interface DanePolisyDoNazwy {
-  /** nazwa placówki; null gdy z jakiegoś powodu jej nie znamy */
+  /** „Ubezpieczenie dla" — krótka nazwa od biura; ma pierwszeństwo */
+  etykieta?: string | null;
+  /** pełna nazwa ubezpieczającego; używana, gdy etykiety nie ma */
   szkola?: string | null;
   /** kod wariantu, np. „65pln50" */
   wariant: string;
@@ -74,8 +82,10 @@ export interface DanePolisyDoNazwy {
 export function nazwaPlikuPolisy(dane: DanePolisyDoNazwy): string {
   const czlony: string[] = [];
 
-  const szkola = skroc(bezpieczny(dane.szkola ?? ""), MAKS_SZKOLA);
-  if (szkola) czlony.push(szkola);
+  // Etykieta pierwsza, pełna nazwa jako zapas. Pusta etykieta (samo spacje)
+  // ma znaczyć „nie podano", a nie „nazwij plik pustym napisem".
+  const opis = skroc(bezpieczny(dane.etykieta ?? "") || bezpieczny(dane.szkola ?? ""), MAKS_SZKOLA);
+  if (opis) czlony.push(opis);
 
   czlony.push(bezpieczny(dane.wariant) || "polisa");
 
@@ -83,4 +93,21 @@ export function nazwaPlikuPolisy(dane: DanePolisyDoNazwy): string {
   if (numer) czlony.push(numer);
 
   return `${czlony.join("_")}.${dane.rozszerzenie ?? "docx"}`;
+}
+
+/**
+ * „SP 5 Słupsk_ulotka_65pln50.pdf"
+ *
+ * Ulotka dotąd nazywała się `ulotka_65pln50.pdf` — dla KAŻDEJ szkoły tak samo,
+ * więc druga pobrana tego samego dnia lądowała w katalogu jako „(1)". Ta sama
+ * etykieta, co przy polisie: jeden wpis przy wystawianiu opisuje oba dokumenty.
+ */
+export function nazwaPlikuUlotki(dane: {
+  etykieta?: string | null;
+  szkola?: string | null;
+  szablon: string;
+}): string {
+  const opis = skroc(bezpieczny(dane.etykieta ?? "") || bezpieczny(dane.szkola ?? ""), MAKS_SZKOLA);
+  const szablon = bezpieczny(dane.szablon) || "ulotka";
+  return opis ? `${opis}_ulotka_${szablon}.pdf` : `ulotka_${szablon}.pdf`;
 }

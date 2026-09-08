@@ -77,12 +77,17 @@ export async function loadTemplate(code: VariantCode): Promise<Buffer> {
 export async function generatePolicyDocx(
   code: VariantCode,
   fields: PolicyFieldData,
+  /** „Ubezpieczenie dla" — skrót od biura; wchodzi TYLKO do nazwy pliku */
+  etykieta?: string | null,
 ): Promise<{ bytes: Buffer; fileName: string }> {
   const template = await loadTemplate(code);
   const bytes = renderDocx(template, fields);
   // Nazwa ubezpieczającego to nazwa placówki - mamy ją tutaj bez dodatkowego
   // zapytania, bo jest jednym z pól drukowanych na samej polisie.
+  // Etykieta nie jest polem dokumentu - na polisie drukuje się pełna nazwa
+  // ubezpieczającego, dokładnie jak dotąd. Zmienia się wyłącznie nazwa pliku.
   const fileName = nazwaPlikuPolisy({
+    etykieta,
     szkola: fields.ubezpieczajacy_nazwa,
     wariant: code,
     numerPolisy: fields.numer_polisy,

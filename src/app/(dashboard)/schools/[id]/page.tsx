@@ -62,6 +62,13 @@ export default async function SchoolProfilePage({
           </Button>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{school.nazwa}</h1>
+            {/* Przy polisie wystawionej na fundację TO jest jedyne miejsce,
+                z którego widać, której szkoły ochrona dotyczy. */}
+            {school.etykieta ? (
+              <p className="text-sm font-medium text-[var(--blekit)]">
+                Ubezpieczenie dla: {school.etykieta}
+              </p>
+            ) : null}
             <p className="text-sm text-muted-foreground">
               REGON/PESEL: {school.regonPesel} · utworzono {formatDate(school.createdAt)}
             </p>
@@ -172,6 +179,7 @@ export default async function SchoolProfilePage({
                     <PolicyEditDialog
                       policyId={p.id}
                       fileName={nazwaPlikuPolisy({
+                        etykieta: school.etykieta,
                         szkola: school.nazwa,
                         wariant: p.variantCode,
                         numerPolisy: p.policyNumber,

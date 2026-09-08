@@ -229,6 +229,12 @@ model School {
   kontaktTelefon String
   kontaktEmail   String
 
+  // "Ubezpieczenie dla" - krotka nazwa wpisywana przez biuro przy wystawianiu.
+  // Trafia do nazwy pliku polisy i ulotki zamiast pelnej nazwy ubezpieczajacego,
+  // i mowi wprost, ktorej szkoly dotyczy polisa wystawiona na fundacje.
+  // Opcjonalna: pusta znaczy "uzyj pelnej nazwy", czyli zachowanie sprzed zmiany.
+  etykieta       String?
+
   // Handling agent (defaulted from the matched SchoolRecord, editable by admin)
   agentId              String?
   agent                Agent?  @relation(fields: [agentId], references: [id])

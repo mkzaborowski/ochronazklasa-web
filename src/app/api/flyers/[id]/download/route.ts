@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { nazwaPlikuUlotki } from "@/lib/interrisk/nazwa-pliku";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const devBypass =
@@ -12,13 +13,25 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   const { id } = await params;
-  const flyer = await db.generatedFlyer.findUnique({ where: { id } });
+  const flyer = await db.generatedFlyer.findUnique({
+    where: { id },
+    include: { school: { select: { nazwa: true, etykieta: true } } },
+  });
   if (!flyer) return new Response("Not found", { status: 404 });
+
+  // Jak przy polisie: nazwę składamy TUTAJ, więc ulotki wygenerowane wcześniej
+  // też pobierają się z nazwą placówki. Dotąd każda nazywała się tak samo
+  // (`ulotka_65pln50.pdf`) i druga tego dnia lądowała w katalogu jako „(1)".
+  const nazwa = nazwaPlikuUlotki({
+    etykieta: flyer.school?.etykieta,
+    szkola: flyer.school?.nazwa,
+    szablon: flyer.templateKey,
+  });
 
   return new Response(new Uint8Array(flyer.fileData), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(flyer.fileName)}`,
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(nazwa)}`,
       "Cache-Control": "private, no-store",
     },
   });

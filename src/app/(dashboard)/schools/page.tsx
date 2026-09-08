@@ -77,6 +77,13 @@ export default async function SchoolsPage({
             >
               <div className="flex-1">
                 <div className="font-medium">{s.nazwa}</div>
+                {/* Bez tego kilka polis wystawionych na tę samą fundację
+                    wygląda na liście identycznie i nie da się ich rozróżnić. */}
+                {s.etykieta ? (
+                  <div className="text-xs font-medium text-[var(--blekit)]">
+                    Ubezpieczenie dla: {s.etykieta}
+                  </div>
+                ) : null}
                 <div className="text-xs text-muted-foreground">
                   REGON/PESEL: {s.regonPesel} · dodano {formatDate(s.createdAt)}
                 </div>

@@ -113,6 +113,10 @@ export async function generatePolicies(input: unknown): Promise<GenerateResult> 
             kontaktNazwa: data.kontaktNazwa,
             kontaktTelefon: data.kontaktTelefon,
             kontaktEmail: data.kontaktEmail,
+            // Pusty skrót zapisujemy jako null, nie jako "" — inaczej „brak
+            // etykiety" miałby w bazie dwie różne postacie i każde miejsce,
+            // które ją czyta, musiałoby pamiętać o obu.
+            etykieta: data.etykieta?.trim() || null,
             agentId: data.agentId.trim(),
             sourceSchoolRecordId: data.sourceSchoolRecordId?.trim() || null,
           },
@@ -173,7 +177,7 @@ export async function generatePolicies(input: unknown): Promise<GenerateResult> 
           const accountNumber = candidate.accountNumber;
           const policyNumber = policyNumberFromAccount(accountNumber);
           const fields = buildFieldData(data, data.insurancePeriod, accountNumber, issueDateStr);
-          const { bytes, fileName } = await generatePolicyDocx(code, fields);
+          const { bytes, fileName } = await generatePolicyDocx(code, fields, school.etykieta);
 
           const policy = await tx.generatedPolicy.create({
             data: {
@@ -234,7 +238,11 @@ export async function updatePolicyFile(
   // pokazywałby nazwę z dysku osoby wgrywającej, a pobranie dawałoby inną.
   const biezaca = await db.generatedPolicy.findUnique({
     where: { id: policyId },
-    select: { variantCode: true, policyNumber: true, school: { select: { nazwa: true } } },
+    select: {
+      variantCode: true,
+      policyNumber: true,
+      school: { select: { nazwa: true, etykieta: true } },
+    },
   });
   const policy = await db.generatedPolicy.update({
     where: { id: policyId },
@@ -242,6 +250,7 @@ export async function updatePolicyFile(
       fileData: bytes,
       fileName: biezaca
         ? nazwaPlikuPolisy({
+            etykieta: biezaca.school?.etykieta,
             szkola: biezaca.school?.nazwa,
             wariant: biezaca.variantCode,
             numerPolisy: biezaca.policyNumber,

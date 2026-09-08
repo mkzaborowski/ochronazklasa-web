@@ -8,7 +8,7 @@
  *
  * Uruchamia się samym node (strip-types), bez bazy i bez Next.js.
  */
-import { nazwaPlikuPolisy } from "../src/lib/interrisk/nazwa-pliku.ts";
+import { nazwaPlikuPolisy, nazwaPlikuUlotki } from "../src/lib/interrisk/nazwa-pliku.ts";
 
 const ZAKAZANE = /[<>:"/\\|?*]/;
 
@@ -20,6 +20,39 @@ interface Przypadek {
 }
 
 const przypadki: Przypadek[] = [
+  {
+    nazwa: "etykieta wygrywa z nazwą",
+    dane: {
+      etykieta: "SP 5 Słupsk",
+      szkola: "Szkoła Podstawowa nr 5 im. Bohaterów Westerplatte w Słupsku",
+      wariant: "65pln50",
+      numerPolisy: "679857",
+    },
+    oczekiwana: "SP 5 Słupsk_65pln50_679857.docx",
+    po_co: "PRZYPADEK ZE ZGŁOSZENIA: krótki skrót zamiast długiej nazwy",
+  },
+  {
+    nazwa: "polisa na fundację dla szkoły",
+    dane: {
+      etykieta: "SP 12 Gdańsk",
+      szkola: "Fundacja IN ALTUM",
+      wariant: "45pln",
+      numerPolisy: "679870",
+    },
+    oczekiwana: "SP 12 Gdańsk_45pln_679870.docx",
+    po_co: "ubezpieczający to fundacja, ale plik ma mówić o szkole",
+  },
+  {
+    nazwa: "etykieta z samych spacji",
+    dane: {
+      etykieta: "   ",
+      szkola: "Szkoła Podstawowa nr 5",
+      wariant: "65pln50",
+      numerPolisy: "679871",
+    },
+    oczekiwana: "Szkoła Podstawowa nr 5_65pln50_679871.docx",
+    po_co: 'pusta etykieta ma znaczyć „nie podano”, a nie pusty człon',
+  },
   {
     nazwa: "zwykła szkoła",
     dane: { szkola: "Szkoła Podstawowa nr 5 w Nowym Sączu", wariant: "65pln50", numerPolisy: "679857" },
@@ -88,6 +121,37 @@ for (const p of przypadki) {
   console.log(
     `${problemy.length ? "BŁĄD" : "OK  "} (${String(wynik.length).padStart(3)}) ${wynik}` +
       `   // ${p.po_co}${problemy.length ? ` [${problemy.join("; ")}]` : ""}`,
+  );
+}
+
+// --- ulotki: ta sama etykieta, inny dokument ---
+const ulotki: { dane: Parameters<typeof nazwaPlikuUlotki>[0]; oczekiwana: string; po_co: string }[] = [
+  {
+    dane: { etykieta: "SP 5 Słupsk", szkola: "Szkoła Podstawowa nr 5", szablon: "65pln50" },
+    oczekiwana: "SP 5 Słupsk_ulotka_65pln50.pdf",
+    po_co: "jedno pole przy wystawianiu opisuje polisę i ulotkę",
+  },
+  {
+    dane: { etykieta: null, szkola: "Fundacja IN ALTUM", szablon: "45pln" },
+    oczekiwana: "Fundacja IN ALTUM_ulotka_45pln.pdf",
+    po_co: "bez etykiety zostaje pełna nazwa",
+  },
+  {
+    dane: { etykieta: null, szkola: null, szablon: "45pln" },
+    oczekiwana: "ulotka_45pln.pdf",
+    po_co: "bez żadnej nazwy wychodzi to, co było wcześniej",
+  },
+];
+
+for (const u of ulotki) {
+  const wynik = nazwaPlikuUlotki(u.dane);
+  const problemy: string[] = [];
+  if (wynik !== u.oczekiwana) problemy.push(`oczekiwano „${u.oczekiwana}"`);
+  if (ZAKAZANE.test(wynik)) problemy.push("znak zakazany w nazwie pliku");
+  if (problemy.length) bledy++;
+  console.log(
+    `${problemy.length ? "BŁĄD" : "OK  "} (${String(wynik.length).padStart(3)}) ${wynik}` +
+      `   // ${u.po_co}${problemy.length ? ` [${problemy.join("; ")}]` : ""}`,
   );
 }
 
