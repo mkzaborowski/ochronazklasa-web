@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KorektaWniosku } from "@/components/korekta-wniosku";
 import { notFound } from "next/navigation";
 import { ETYKIETY_STATUSU, KLASA_STATUSU, pobierzWniosek, type StatusWniosku } from "@/lib/online-api";
 import { OnlineActions } from "@/components/online-actions";
@@ -167,6 +168,28 @@ export default async function OnlineApplicationPage({
           </TableBody>
         </Table>
       </div>
+
+      <KorektaWniosku
+        id={w.id}
+        oplacajacy={{
+          imie: o.imie,
+          nazwisko: o.nazwisko,
+          identyfikacja: o.identyfikacja,
+          miejscowosc: o.miejscowosc,
+          kodPocztowy: o.kodPocztowy,
+          ulica: o.ulica,
+          nrDomu: o.nrDomu,
+          nrLokalu: o.nrLokalu,
+          email: o.email,
+          telefon: o.telefon,
+        }}
+        ubezpieczeni={w.ubezpieczeniPelni.map((u) => ({
+          imie: u.imie,
+          nazwisko: u.nazwisko,
+          identyfikacja: u.identyfikacja,
+        }))}
+        maCertyfikat={Boolean(w.numerCertyfikatu)}
+      />
 
       <div className="rounded-lg border bg-card p-5">
         <h2 className="mb-3 text-sm font-semibold">Działania</h2>

@@ -155,6 +155,40 @@ export const pobierzWniosek = (id: string) =>
 
 export const pobierzStanSystemu = () => zapytaj<StanSystemu>("/api/admin/status");
 
+/**
+ * Poprawka danych na wystawionym wniosku.
+ *
+ * Usługa sprzedaży pilnuje granic: nie da się tędy zmienić liczby
+ * ubezpieczonych, wariantu, składki ani zgód — czyli tego, CO zostało kupione.
+ * Poprawić można to, co rodzic wpisał z ręki i w czym się pomylił.
+ */
+export interface KorektaWniosku {
+  kto: string;
+  powod: string;
+  oplacajacy?: Record<string, unknown>;
+  ubezpieczeni?: Record<string, unknown>[];
+}
+
+export const poprawWniosek = (id: string, korekta: KorektaWniosku) =>
+  zapytaj<{ ok: boolean; komunikat: string; korekty: number }>(
+    `/api/admin/applications/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(korekta),
+    },
+  );
+
+/**
+ * Wystawia certyfikat jeszcze raz, z tym samym numerem — po poprawce danych.
+ * Osobno od `wyslijPonownie`, które wysyła STARY plik bez zmian.
+ */
+export const wystawPonownie = (id: string) =>
+  zapytaj<{ ok: boolean; status: string; numerCertyfikatu: string | null; komunikat: string }>(
+    `/api/admin/applications/${encodeURIComponent(id)}/reissue`,
+    { method: "POST" },
+  );
+
 export const wyslijPonownie = (id: string) =>
   zapytaj<{ ok: boolean; komunikat: string }>(
     `/api/admin/applications/${encodeURIComponent(id)}/resend`,
