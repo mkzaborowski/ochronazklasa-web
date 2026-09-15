@@ -14,7 +14,7 @@ import {
   RozliczenieInterrisk,
   type WariantDoRozliczenia,
 } from "@/components/rozliczenie-interrisk";
-import { brakujaceKody } from "@/lib/interrisk/rozliczenie-kody";
+import { PODRYZYKA_WARIANTU, problemyKonfiguracji } from "@/lib/interrisk/rozliczenie-kody";
 import { db } from "@/lib/db";
 import {
   Table,
@@ -111,6 +111,7 @@ export default async function OnlineSalesPage({
             numerPolisy: w.numerPolisy,
             skladkaZl: w.skladkaZl,
             osob: 1,
+            podryzyk: (PODRYZYKA_WARIANTU[w.wariantId] ?? []).length,
           });
       }
       return [...wg.values()].sort((a, b) => a.skladkaZl - b.skladkaZl);
@@ -186,7 +187,7 @@ export default async function OnlineSalesPage({
 
       <RozliczenieInterrisk
         warianty={doRozliczenia}
-        brakiKodow={brakujaceKody(doRozliczenia.map((w) => w.wariantId))}
+        problemy={problemyKonfiguracji(doRozliczenia.map((w) => w.wariantId))}
       />
 
       <form className="flex flex-wrap gap-2" method="get">

@@ -3,10 +3,10 @@ import { pobierzRozliczenie } from "@/lib/online-api";
 import {
   nazwaPlikuRozliczenia,
   plikRozliczenia,
-  type WierszRozliczenia,
+  type OsobaDoRozliczenia,
 } from "@/lib/interrisk/rozliczenie";
 import {
-  KODY_WARIANTOW,
+  PODRYZYKA_WARIANTU,
   PROWIZJA_PROCENT,
   UPRAWNIONY,
 } from "@/lib/interrisk/rozliczenie-kody";
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     return new Response("Podaj daty aneksu i płatności", { status: 400 });
   }
 
-  let wiersze: WierszRozliczenia[];
+  let osoby: OsobaDoRozliczenia[];
   let numerPolisy = "";
   try {
     const dane = await pobierzRozliczenie();
@@ -55,15 +55,13 @@ export async function GET(req: Request) {
       return new Response("Ten wariant nie ma jeszcze wystawionych certyfikatów", { status: 404 });
     }
     numerPolisy = dlaWariantu[0].numerPolisy;
-    wiersze = dlaWariantu.map((w) => ({
+    osoby = dlaWariantu.map((w) => ({
       numerPolisy: w.numerPolisy,
       imie: w.imie,
       nazwisko: w.nazwisko,
       pesel: w.pesel,
       okresOd: w.okresOd,
       okresDo: w.okresDo,
-      sumaUbezpieczenia: w.sumaUbezpieczenia,
-      skladkaZl: w.skladkaZl,
     }));
   } catch (error) {
     return new Response(
@@ -72,8 +70,16 @@ export async function GET(req: Request) {
     );
   }
 
-  const kody = KODY_WARIANTOW[wariantId] ?? { kodTaryfowy: "", kluczStatystyczny: "" };
-  const bytes = await plikRozliczenia(wiersze, {
+  const podryzyka = PODRYZYKA_WARIANTU[wariantId] ?? [];
+  if (podryzyka.length === 0) {
+    return new Response(
+      "Brak rozbicia wariantu na podryzyka — centrala nie podała jeszcze kodów taryfowych. " +
+        "Uzupełnij src/lib/interrisk/rozliczenie-kody.ts.",
+      { status: 409 },
+    );
+  }
+
+  const bytes = await plikRozliczenia(osoby, {
     nazwaKorekty,
     // Data z formularza jest dniem kalendarzowym, nie chwilą — „T12:00"
     // trzyma ją w tym samym dniu niezależnie od strefy serwera.
@@ -81,9 +87,11 @@ export async function GET(req: Request) {
     dataPlatnosci: new Date(`${dataPlatnosci}T12:00:00`),
     uprawniony: UPRAWNIONY,
     prowizjaProcent: PROWIZJA_PROCENT,
-    kodTaryfowy: kody.kodTaryfowy,
-    kluczStatystyczny: kody.kluczStatystyczny,
     zPeselem,
+    // Bez rozbicia z centrali plik wyszedłby PUSTY — zero wierszy, bo każda
+    // osoba mnoży się przez liczbę podryzyk. Lepiej odmówić z wyjaśnieniem
+    // niż oddać poprawnie sformatowany arkusz z samym nagłówkiem.
+    podryzyka: PODRYZYKA_WARIANTU[wariantId] ?? [],
   });
 
   return new Response(new Uint8Array(bytes), {

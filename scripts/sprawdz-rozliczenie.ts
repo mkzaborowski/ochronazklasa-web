@@ -12,6 +12,7 @@
  */
 import ExcelJS from "exceljs";
 import { plikRozliczenia, nazwaPlikuRozliczenia, NAGLOWKI } from "../src/lib/interrisk/rozliczenie.ts";
+import { problemyKonfiguracji, PODRYZYKA_WARIANTU, SKLADKI_WARIANTOW } from "../src/lib/interrisk/rozliczenie-kody.ts";
 
 /** Kolumna → czego wymaga szablon. `pusty` = w szablonie nic tam nie stoi. */
 const OCZEKIWANE: { naglowek: string; typ: "tekst" | "liczba" | "data" | "pusty"; format?: string }[] = [
@@ -36,15 +37,27 @@ const OCZEKIWANE: { naglowek: string; typ: "tekst" | "liczba" | "data" | "pusty"
   { naglowek: "Wysokość prowizji 2 (%)", typ: "pusty" },
 ];
 
+/**
+ * Rozbicie na podryzyka przepisane z szablonu — pakiet o składce 79 zł.
+ * Jedna osoba daje tyle wierszy, ile ma tu pozycji.
+ */
+const PODRYZYKA = [
+  { kodTaryfowy: "016818BK", kluczStatystyczny: "00711111101111070X", sumaUbezpieczenia: 20000, skladkaZl: 51.0 },
+  { kodTaryfowy: "028018BK", kluczStatystyczny: "00711070X", sumaUbezpieczenia: 20000, skladkaZl: 12.0 },
+  { kodTaryfowy: "02153018BK", kluczStatystyczny: "11070X", sumaUbezpieczenia: 4000, skladkaZl: 4.1 },
+  { kodTaryfowy: "02156018BK", kluczStatystyczny: "11070X", sumaUbezpieczenia: 15000, skladkaZl: 9.5 },
+  { kodTaryfowy: "184118BK", kluczStatystyczny: "1070X", sumaUbezpieczenia: 5000, skladkaZl: 1.2 },
+  { kodTaryfowy: "18080018BK", kluczStatystyczny: "100", sumaUbezpieczenia: 5000, skladkaZl: 1.2 },
+];
+
 const ZESTAW = {
   nazwaKorekty: "ZESTAW 01.09.2026",
   dataAneksu: new Date("2026-08-31T12:00:00"),
   dataPlatnosci: new Date("2026-10-10T12:00:00"),
   uprawniony: "02/3008",
   prowizjaProcent: 40,
-  kodTaryfowy: "016818BK",
-  kluczStatystyczny: "00711111101111070X",
   zPeselem: false,
+  podryzyka: PODRYZYKA,
 };
 
 const WIERSZE = [
@@ -55,8 +68,6 @@ const WIERSZE = [
     pesel: "12232210571",
     okresOd: "2026-09-13",
     okresDo: "2027-09-12",
-    sumaUbezpieczenia: 75000,
-    skladkaZl: 135,
   },
 ];
 
@@ -132,6 +143,51 @@ console.log("\n[6] nazwa pliku");
   sprawdz("zachowuje myślnik w numerze", n.includes("A-A"), n);
   sprawdz("bez znaków zakazanych w Windows", !/[<>:"/\\|?*]/.test(n), n);
   sprawdz("rozszerzenie xlsx", n.endsWith(".xlsx"), n);
+}
+
+console.log("\n[7] jedna osoba rozwija się na tyle wierszy, ile ma podryzyk");
+{
+  const ws = await wczytaj(await plikRozliczenia(WIERSZE, ZESTAW));
+  // 1 osoba × 6 podryzyk + nagłówek = 7 wierszy.
+  sprawdz(`1 osoba × ${PODRYZYKA.length} podryzyk`, ws.rowCount === PODRYZYKA.length + 1,
+    `wierszy: ${ws.rowCount}`);
+  const dwie = await wczytaj(
+    await plikRozliczenia([WIERSZE[0], { ...WIERSZE[0], imie: "Zofia" }], ZESTAW),
+  );
+  sprawdz("2 osoby dają dwa razy tyle", dwie.rowCount === PODRYZYKA.length * 2 + 1,
+    `wierszy: ${dwie.rowCount}`);
+  // Wiersze jednej osoby stoją obok siebie, jak w szablonie.
+  sprawdz("wiersze osoby trzymają się razem",
+    dwie.getRow(2).getCell(4).value === "Marcel" &&
+      dwie.getRow(1 + PODRYZYKA.length).getCell(4).value === "Marcel" &&
+      dwie.getRow(2 + PODRYZYKA.length).getCell(4).value === "Zofia");
+
+  const sumaWierszy = Array.from({ length: PODRYZYKA.length }, (_, i) =>
+    Number(ws.getRow(2 + i).getCell(14).value),
+  ).reduce((a, b) => a + b, 0);
+  sprawdz("składki podryzyk sumują się do składki osoby",
+    Math.round(sumaWierszy * 100) === 7900, `${sumaWierszy.toFixed(2)} zł`);
+}
+
+console.log("\n[8] konfiguracja wariantów — czy da się już rozliczać");
+{
+  const warianty = Object.keys(SKLADKI_WARIANTOW);
+  const problemy = problemyKonfiguracji(warianty);
+  // Dopóki centrala nie poda rozbicia, TO MA zgłaszać problem. Test pilnuje,
+  // że sprawdzenie w ogóle działa - a nie tego, że kody już są.
+  sprawdz("brak rozbicia jest wykrywany",
+    problemy.length === warianty.filter((w) => (PODRYZYKA_WARIANTU[w] ?? []).length === 0).length,
+    problemy.map((p) => `${p.wariantId}: ${p.powod}`).join("; ") || "wszystko uzupełnione");
+
+  // Rozbicie, które nie sumuje się do składki wariantu, też musi być złapane.
+  const zle = { ...PODRYZYKA_WARIANTU };
+  PODRYZYKA_WARIANTU.w135 = [
+    { kodTaryfowy: "X", kluczStatystyczny: "Y", sumaUbezpieczenia: 75000, skladkaZl: 100 },
+  ];
+  const p = problemyKonfiguracji(["w135"]);
+  sprawdz("rozjazd sumy jest wykrywany",
+    p.length === 1 && p[0].powod.includes("100.00"), p[0]?.powod ?? "nie wykryto");
+  PODRYZYKA_WARIANTU.w135 = zle.w135;
 }
 
 console.log(bledy === 0 ? "\nPlik zgodny z szablonem." : `\n${bledy} niezgodności.`);

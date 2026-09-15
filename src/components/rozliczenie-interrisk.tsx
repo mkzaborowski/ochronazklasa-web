@@ -23,15 +23,17 @@ export interface WariantDoRozliczenia {
   numerPolisy: string;
   skladkaZl: number;
   osob: number;
+  /** ile wierszy zajmie jedna osoba; 0 = centrala nie podała rozbicia */
+  podryzyk: number;
 }
 
 export function RozliczenieInterrisk({
   warianty,
-  brakiKodow,
+  problemy,
 }: {
   warianty: WariantDoRozliczenia[];
-  /** warianty bez kodów z centrali — plik wyjdzie z pustymi kolumnami */
-  brakiKodow: string[];
+  /** warianty, których jeszcze nie da się rozliczyć, z powodem */
+  problemy: { wariantId: string; powod: string }[];
 }) {
   const dzis = new Date().toISOString().slice(0, 10);
   const [zestaw, setZestaw] = useState("");
@@ -65,15 +67,21 @@ export function RozliczenieInterrisk({
         Jeden plik na polisę grupową — bo tak wygląda szablon z centrali.
       </p>
 
-      {brakiKodow.length > 0 ? (
+      {problemy.length > 0 ? (
         <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <span>
-            Brakuje kodów z centrali ({brakiKodow.join(", ")}). Plik pobierze się, ale kolumny
-            {" "}
-            <em>kod taryfowy</em>, <em>klucz statystyczny</em> i <em>Uprawniony</em> będą puste —
-            InterRisk go tak nie zaczyta. Uzupełnij je w{" "}
-            <code>src/lib/interrisk/rozliczenie-kody.ts</code>.
+            Centrala nie podała jeszcze rozbicia wariantów na podryzyka. W szablonie
+            jedna osoba zajmuje kilka wierszy — po jednym na każdy składnik pakietu,
+            z własnym kodem taryfowym, kluczem, sumą i składką. Bez tego pliku nie da
+            się złożyć.
+            <ul className="mt-2 list-disc pl-5">
+              {problemy.map((p) => (
+                <li key={p.wariantId}>
+                  <strong>{p.wariantId}</strong> — {p.powod}
+                </li>
+              ))}
+            </ul>
           </span>
         </div>
       ) : null}
@@ -131,15 +139,18 @@ export function RozliczenieInterrisk({
                 <span className="font-normal text-muted-foreground">· {w.skladkaZl} zł</span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {w.osob} {w.osob === 1 ? "ubezpieczony" : "ubezpieczonych"} do rozliczenia
+                {w.osob} {w.osob === 1 ? "ubezpieczony" : "ubezpieczonych"}
+                {w.podryzyk > 0
+                  ? ` · ${w.osob * w.podryzyk} wierszy w pliku (${w.podryzyk} podryzyka na osobę)`
+                  : " · brak rozbicia na podryzyka"}
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
               nativeButton={false}
-              disabled={!gotowe}
-              render={<a href={gotowe ? link(w.wariantId) : undefined} />}
+              disabled={!gotowe || w.podryzyk === 0}
+              render={<a href={gotowe && w.podryzyk > 0 ? link(w.wariantId) : undefined} />}
             >
               <FileSpreadsheet className="size-4" /> Pobierz xlsx
             </Button>
