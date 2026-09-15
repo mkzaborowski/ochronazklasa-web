@@ -37,6 +37,10 @@ jobs:
       # końcu, limit długości) i żadnej z nich nie widać w typach. Złamana
       # kończy się plikiem, którego biuro nie zapisze.
       - run: npm run check:nazwy
+      # Plik rozliczeniowy dla InterRisk jest DO ZACZYTANIA, nie do oglądania:
+      # liczy się zgodność co do kolumny i typu komórki, a typu nie widać gołym
+      # okiem. Data w miejscu tekstu wywala się dopiero u ubezpieczyciela.
+      - run: npm run check:rozliczenie
       - run: npm run check:numeracja
       # check:ulotki czyta tekst gotowego PDF-a, żeby sprawdzić, co NAPRAWDĘ
       # wyszło na wydruku - do tego potrzebny jest pdftotext z poppler-utils.

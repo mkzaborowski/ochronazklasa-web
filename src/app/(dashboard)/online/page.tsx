@@ -3,12 +3,18 @@ import {
   BEZ_AGENTA,
   ETYKIETY_STATUSU,
   KLASA_STATUSU,
+  pobierzRozliczenie,
   pobierzStanSystemu,
   pobierzWnioski,
   type StatusWniosku,
 } from "@/lib/online-api";
 import { dopasujAgentow, kodyDoRozstrzygniecia } from "@/lib/agents/atrybucja";
 import { PrzypiszKod } from "@/components/przypisz-kod";
+import {
+  RozliczenieInterrisk,
+  type WariantDoRozliczenia,
+} from "@/components/rozliczenie-interrisk";
+import { brakujaceKody } from "@/lib/interrisk/rozliczenie-kody";
 import { db } from "@/lib/db";
 import {
   Table,
@@ -90,6 +96,27 @@ export default async function OnlineSalesPage({
         .catch(() => [])
     : [];
 
+  // Wsad do rozliczenia InterRisk: wystawione certyfikaty z opłaconą składką,
+  // zgrupowane po polisie grupowej (u nas = po wariancie). Awaria tego zapytania
+  // nie może przewrócić listy sprzedaży - wtedy po prostu nie ma sekcji.
+  const doRozliczenia = await pobierzRozliczenie()
+    .then(({ wiersze }) => {
+      const wg = new Map<string, WariantDoRozliczenia>();
+      for (const w of wiersze) {
+        const biezacy = wg.get(w.wariantId);
+        if (biezacy) biezacy.osob += 1;
+        else
+          wg.set(w.wariantId, {
+            wariantId: w.wariantId,
+            numerPolisy: w.numerPolisy,
+            skladkaZl: w.skladkaZl,
+            osob: 1,
+          });
+      }
+      return [...wg.values()].sort((a, b) => a.skladkaZl - b.skladkaZl);
+    })
+    .catch(() => [] as WariantDoRozliczenia[]);
+
   const kafelki = [
     { etykieta: "Wnioski", wartosc: dane.statystyki.wszystkie },
     { etykieta: "Opłacone", wartosc: dane.statystyki.oplacone },
@@ -156,6 +183,11 @@ export default async function OnlineSalesPage({
           </ul>
         </div>
       ) : null}
+
+      <RozliczenieInterrisk
+        warianty={doRozliczenia}
+        brakiKodow={brakujaceKody(doRozliczenia.map((w) => w.wariantId))}
+      />
 
       <form className="flex flex-wrap gap-2" method="get">
         <input

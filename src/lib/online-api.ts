@@ -150,6 +150,28 @@ export const pobierzKodyWSprzedazy = async (): Promise<string[]> => {
   return statystyki.wgAgenta.map((p) => p.kod);
 };
 
+/** Jeden wiersz na UBEZPIECZONEGO — kształt wzięty z szablonu InterRisk. */
+export interface WierszRozliczeniaApi {
+  wniosekId: string;
+  wariantId: string;
+  numerPolisy: string;
+  numerCertyfikatu: string | null;
+  imie: string;
+  nazwisko: string;
+  pesel: string;
+  dataUrodzenia: string;
+  okresOd: string;
+  okresDo: string;
+  sumaUbezpieczenia: number;
+  skladkaZl: number;
+  certyfikatWyslanyAt: string | null;
+  kodAgenta: string | null;
+}
+
+/** Wystawione certyfikaty z potwierdzoną płatnością — wsad do rozliczenia. */
+export const pobierzRozliczenie = () =>
+  zapytaj<{ wiersze: WierszRozliczeniaApi[] }>("/api/admin/rozliczenie");
+
 export const pobierzWniosek = (id: string) =>
   zapytaj<WniosekPelny>(`/api/admin/applications/${encodeURIComponent(id)}`);
 
