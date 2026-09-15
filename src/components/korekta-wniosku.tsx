@@ -173,37 +173,10 @@ export function KorektaWniosku({ id, oplacajacy, ubezpieczeni, maCertyfikat }: P
                   onChange={(e) => zmienUbezpieczonego(i, { nazwisko: e.target.value })}
                 />
               </Pole>
-              {/* Typ identyfikacji jest wyborem rodzica przy zakupie, ale przy
-                  poprawce bywa właśnie tym, co trzeba zmienić: mama wpisała swój
-                  PESEL, a dziecko ma tylko datę urodzenia. */}
-              <Pole label="Identyfikacja">
-                <select
-                  value={x.identyfikacja.typ}
-                  onChange={(e) => zmienIdent(i, { typ: e.target.value })}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="pesel">PESEL</option>
-                  <option value="dataUrodzenia">Data urodzenia</option>
-                </select>
-              </Pole>
-              {x.identyfikacja.typ === "pesel" ? (
-                <Pole label="PESEL">
-                  <Input
-                    value={x.identyfikacja.pesel}
-                    inputMode="numeric"
-                    maxLength={11}
-                    onChange={(e) => zmienIdent(i, { pesel: e.target.value })}
-                  />
-                </Pole>
-              ) : (
-                <Pole label="Data urodzenia">
-                  <Input
-                    type="date"
-                    value={x.identyfikacja.dataUrodzenia}
-                    onChange={(e) => zmienIdent(i, { dataUrodzenia: e.target.value })}
-                  />
-                </Pole>
-              )}
+              <PolaIdentyfikacji
+                ident={x.identyfikacja}
+                onZmiana={(zmiana) => zmienIdent(i, zmiana)}
+              />
             </div>
           ))}
         </div>
@@ -220,6 +193,18 @@ export function KorektaWniosku({ id, oplacajacy, ubezpieczeni, maCertyfikat }: P
           <Pole label="Nazwisko">
             <Input value={o.nazwisko} onChange={(e) => setO({ ...o, nazwisko: e.target.value })} />
           </Pole>
+          {/* PESEL opłacającego DRUKUJE SIĘ na certyfikacie, w rubryce
+              UBEZPIECZAJĄCY — więc literówka w nim jest błędem na dokumencie
+              dokładnie tak samo, jak literówka w PESEL-u dziecka. */}
+          <PolaIdentyfikacji
+            ident={o.identyfikacja}
+            onZmiana={(zmiana) =>
+              setO((biezacy) => ({
+                ...biezacy,
+                identyfikacja: { ...biezacy.identyfikacja, ...zmiana },
+              }))
+            }
+          />
           <Pole label="Ulica">
             <Input value={o.ulica} onChange={(e) => setO({ ...o, ulica: e.target.value })} />
           </Pole>
@@ -329,6 +314,58 @@ export function KorektaWniosku({ id, oplacajacy, ubezpieczeni, maCertyfikat }: P
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Typ identyfikacji i odpowiadające mu pole.
+ *
+ * Typ jest wyborem rodzica przy zakupie, ale przy poprawce bywa właśnie tym,
+ * co trzeba zmienić: mama wpisała swój PESEL w rubryce dziecka, a dziecko ma
+ * tylko datę urodzenia. Dlatego zmienia się go tu, a nie tylko samą wartość.
+ *
+ * Ten sam komponent obsługuje dziecko i rodzica — reguły są identyczne,
+ * a rozjazd między dwiema kopiami znaczyłby, że jedno z nich da się poprawić,
+ * a drugiego nie. Dokładnie tak było do tej pory.
+ */
+function PolaIdentyfikacji({
+  ident,
+  onZmiana,
+}: {
+  ident: Ident;
+  onZmiana: (zmiana: Partial<Ident>) => void;
+}) {
+  return (
+    <>
+      <Pole label="Identyfikacja">
+        <select
+          value={ident.typ}
+          onChange={(e) => onZmiana({ typ: e.target.value })}
+          className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="pesel">PESEL</option>
+          <option value="dataUrodzenia">Data urodzenia</option>
+        </select>
+      </Pole>
+      {ident.typ === "pesel" ? (
+        <Pole label="PESEL">
+          <Input
+            value={ident.pesel}
+            inputMode="numeric"
+            maxLength={11}
+            onChange={(e) => onZmiana({ pesel: e.target.value })}
+          />
+        </Pole>
+      ) : (
+        <Pole label="Data urodzenia">
+          <Input
+            type="date"
+            value={ident.dataUrodzenia}
+            onChange={(e) => onZmiana({ dataUrodzenia: e.target.value })}
+          />
+        </Pole>
+      )}
+    </>
   );
 }
 
