@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   School,
   Database,
+  FileSpreadsheet,
   UserCog,
 } from "lucide-react";
 
@@ -48,7 +49,10 @@ const nav = [
   },
   {
     label: "Sprzedaż online",
-    items: [{ title: "Polisy indywidualne", href: "/online", icon: ShoppingCart }],
+    items: [
+      { title: "Polisy indywidualne", href: "/online", icon: ShoppingCart },
+      { title: "Rozliczenia", href: "/rozliczenia", icon: FileSpreadsheet },
+    ],
   },
   {
     label: "Dane",
