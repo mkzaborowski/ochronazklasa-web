@@ -41,6 +41,10 @@ jobs:
       # liczy się zgodność co do kolumny i typu komórki, a typu nie widać gołym
       # okiem. Data w miejscu tekstu wywala się dopiero u ubezpieczyciela.
       - run: npm run check:rozliczenie
+      # Podział prowizji to wypłaty dla ludzi. Błąd tu nie wywala strony,
+      # tylko cicho zaniża albo zawyża komuś pieniądze - dlatego pilnujemy,
+      # że suma wypłat zawsze równa się prowizji od InterRisk co do grosza.
+      - run: npm run check:prowizje
       - run: npm run check:numeracja
       # check:ulotki czyta tekst gotowego PDF-a, żeby sprawdzić, co NAPRAWDĘ
       # wyszło na wydruku - do tego potrzebny jest pdftotext z poppler-utils.

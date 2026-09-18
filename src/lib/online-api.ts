@@ -165,6 +165,8 @@ export interface WierszRozliczeniaApi {
   sumaUbezpieczenia: number;
   skladkaZl: number;
   certyfikatWyslanyAt: string | null;
+  /** data SPRZEDAŻY w UTC, format SQLite „2026-09-16 08:41:45" — nie zmienia się */
+  utworzono: string;
   kodAgenta: string | null;
 }
 

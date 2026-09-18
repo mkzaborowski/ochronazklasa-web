@@ -25,7 +25,8 @@
     "konto-agenta": "node --env-file=.env scripts/konto-agenta.mjs",
     "check:kody": "node --experimental-strip-types scripts/sprawdz-rozpoznawanie.ts",
     "check:nazwy": "node --experimental-strip-types scripts/sprawdz-nazwy-plikow.ts",
-    "check:rozliczenie": "node --experimental-strip-types scripts/sprawdz-rozliczenie.ts"
+    "check:rozliczenie": "node --experimental-strip-types scripts/sprawdz-rozliczenie.ts",
+    "check:prowizje": "node --experimental-strip-types scripts/sprawdz-prowizje.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

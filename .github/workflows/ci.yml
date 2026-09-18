@@ -31,6 +31,10 @@ jobs:
       # liczy się zgodność co do kolumny i typu komórki, a typu nie widać gołym
       # okiem. Data w miejscu tekstu wywala się dopiero u ubezpieczyciela.
       - run: npm run check:rozliczenie
+      # Podział prowizji to wypłaty dla ludzi. Błąd tu nie wywala strony,
+      # tylko cicho zaniża albo zawyża komuś pieniądze - dlatego pilnujemy,
+      # że suma wypłat zawsze równa się prowizji od InterRisk co do grosza.
+      - run: npm run check:prowizje
       - run: npm run check:numeracja
       # Ulotki przychodzą od dostawcy WYPEŁNIONE przykładem. Pole, któremu przy
       # budowie mapy nie nadano roli, nie jest nadpisywane - i cudza szkoła albo
