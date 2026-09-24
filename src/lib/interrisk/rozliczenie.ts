@@ -63,7 +63,8 @@ export interface OsobaDoRozliczenia {
 export interface PodryzykoDoRozliczenia {
   kodTaryfowy: string;
   kluczStatystyczny: string;
-  sumaUbezpieczenia: number;
+  /** `null` = centrala nie podała; komórka zostaje pusta, nie zerowa */
+  sumaUbezpieczenia: number | null;
   skladkaZl: number;
 }
 
@@ -113,6 +114,8 @@ export async function plikRozliczenia(
         naglowek.zPeselem ? o.pesel : null,
         o.okresOd,
         o.okresDo,
+        // Nieznana suma zostaje PUSTA, nie zerowa: zero to konkretna deklaracja
+        // („ryzyko na 0 zł"), a pusta komórka widać przy imporcie.
         pr.sumaUbezpieczenia,
         pr.sumaUbezpieczenia,
         1,

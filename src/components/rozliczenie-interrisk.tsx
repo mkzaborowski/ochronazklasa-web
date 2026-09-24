@@ -25,6 +25,8 @@ export interface WariantDoRozliczenia {
   osob: number;
   /** ile wierszy zajmie jedna osoba; 0 = centrala nie podała rozbicia */
   podryzyk: number;
+  /** czy rozbicie jest kompletne — bez tego pliku nie wolno złożyć */
+  gotowy: boolean;
 }
 
 export function RozliczenieInterrisk({
@@ -71,10 +73,11 @@ export function RozliczenieInterrisk({
         <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <span>
-            Centrala nie podała jeszcze rozbicia wariantów na podryzyka. W szablonie
-            jedna osoba zajmuje kilka wierszy — po jednym na każdy składnik pakietu,
-            z własnym kodem taryfowym, kluczem, sumą i składką. Bez tego pliku nie da
-            się złożyć.
+            Rozbicie na podryzyka jest niepełne, więc tych wariantów nie da się jeszcze
+            rozliczyć. W szablonie jedna osoba zajmuje kilka wierszy — po jednym na każdy
+            składnik pakietu, z własnym kodem taryfowym, kluczem, sumą ubezpieczenia
+            i składką. Kody, klucze i składki przyszły z centrali; brakujące pozycje
+            trzeba u niej dopytać.
             <ul className="mt-2 list-disc pl-5">
               {problemy.map((p) => (
                 <li key={p.wariantId}>
@@ -140,17 +143,18 @@ export function RozliczenieInterrisk({
               </div>
               <div className="text-xs text-muted-foreground">
                 {w.osob} {w.osob === 1 ? "ubezpieczony" : "ubezpieczonych"}
-                {w.podryzyk > 0
-                  ? ` · ${w.osob * w.podryzyk} wierszy w pliku (${w.podryzyk} podryzyka na osobę)`
-                  : " · brak rozbicia na podryzyka"}
+                {w.podryzyk === 0
+                  ? " · brak rozbicia na podryzyka"
+                  : ` · ${w.osob * w.podryzyk} wierszy w pliku (${w.podryzyk} podryzyka na osobę)` +
+                    (w.gotowy ? "" : " · rozbicie niepełne")}
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
               nativeButton={false}
-              disabled={!gotowe || w.podryzyk === 0}
-              render={<a href={gotowe && w.podryzyk > 0 ? link(w.wariantId) : undefined} />}
+              disabled={!gotowe || !w.gotowy}
+              render={<a href={gotowe && w.gotowy ? link(w.wariantId) : undefined} />}
             >
               <FileSpreadsheet className="size-4" /> Pobierz xlsx
             </Button>

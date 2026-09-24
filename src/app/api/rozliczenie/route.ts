@@ -7,6 +7,7 @@ import {
 } from "@/lib/interrisk/rozliczenie";
 import {
   PODRYZYKA_WARIANTU,
+  problemyKonfiguracji,
   PROWIZJA_PROCENT,
   UPRAWNIONY,
 } from "@/lib/interrisk/rozliczenie-kody";
@@ -70,14 +71,20 @@ export async function GET(req: Request) {
     );
   }
 
-  const podryzyka = PODRYZYKA_WARIANTU[wariantId] ?? [];
-  if (podryzyka.length === 0) {
+  // To samo sprawdzenie, co wypisuje powody w panelu — żeby przycisk i to
+  // wejście nie mogły się rozjechać. Niekompletne rozbicie odrzucamy tak samo
+  // jak brak rozbicia: plik wyszedłby poprawnie sformatowany i błędny, a taki
+  // trafia do ubezpieczyciela i wraca po tygodniu.
+  const problemy = problemyKonfiguracji([wariantId]);
+  if (problemy.length > 0) {
     return new Response(
-      "Brak rozbicia wariantu na podryzyka — centrala nie podała jeszcze kodów taryfowych. " +
-        "Uzupełnij src/lib/interrisk/rozliczenie-kody.ts.",
+      `Nie można rozliczyć tego wariantu: ${problemy.map((p) => p.powod).join("; ")}. ` +
+        "Uzupełnij src/lib/interrisk/rozliczenie-kody.ts danymi z centrali.",
       { status: 409 },
     );
   }
+
+  const podryzyka = PODRYZYKA_WARIANTU[wariantId] ?? [];
 
   const bytes = await plikRozliczenia(osoby, {
     nazwaKorekty,
@@ -88,10 +95,7 @@ export async function GET(req: Request) {
     uprawniony: UPRAWNIONY,
     prowizjaProcent: PROWIZJA_PROCENT,
     zPeselem,
-    // Bez rozbicia z centrali plik wyszedłby PUSTY — zero wierszy, bo każda
-    // osoba mnoży się przez liczbę podryzyk. Lepiej odmówić z wyjaśnieniem
-    // niż oddać poprawnie sformatowany arkusz z samym nagłówkiem.
-    podryzyka: PODRYZYKA_WARIANTU[wariantId] ?? [],
+    podryzyka,
   });
 
   return new Response(new Uint8Array(bytes), {

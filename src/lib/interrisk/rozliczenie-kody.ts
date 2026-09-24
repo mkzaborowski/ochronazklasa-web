@@ -5,20 +5,15 @@
  * centralę: 918 ubezpieczonych daje 5833 wiersze, czyli ponad sześć wierszy na
  * osobę. Każdy wiersz to JEDNO PODRYZYKO — osobny kod taryfowy, osobny klucz
  * statystyczny, własna suma ubezpieczenia i własna składka. Składki podryzyk
- * sumują się do tego, co klient zapłacił:
+ * sumują się do tego, co klient zapłacił.
  *
- *   016818BK    SU  20 000   51,00 zł
- *   028018BK    SU  20 000   12,00 zł
- *   02153018BK  SU   4 000    4,10 zł
- *   02156018BK  SU  15 000    9,50 zł
- *   184118BK    SU   5 000    1,20 zł
- *   18080018BK  SU   5 000    1,20 zł
- *   ─────────────────────────────────
- *   jedna osoba              79,00 zł
- *
- * DLATEGO POTRZEBUJEMY OD CENTRALI TABELI, a nie pojedynczych kodów: dla
- * każdego naszego wariantu (60, 90, 135, 180, 250 zł) listy podryzyk z kodem,
- * kluczem, sumą i składką.
+ * Kody i składki niżej są przepisane z pięciu arkuszy przysłanych przez
+ * centralę („60 zł / 90 ZŁ / 135 ZŁ / 180 / 250 Plik do rozliczeń online.xlsx"),
+ * po jednym na wariant. We wszystkich pięciu ten sam zestaw sześciu podryzyk —
+ * różnią się wyłącznie składki. Dlatego trzymamy to jako JEDNĄ tabelę ze
+ * składką na wariant, a nie pięć osobnych list: przy pięciu kopiach jedna
+ * literówka w kodzie siedziałaby w kodzie tylko dla jednego wariantu i wyszła
+ * dopiero przy imporcie u ubezpieczyciela.
  *
  * Suma składek podryzyk MUSI się zgadzać ze składką wariantu. Panel i
  * `npm run check:rozliczenie` pilnują tego osobno — rozjazd znaczyłby, że
@@ -29,32 +24,80 @@
 export interface Podryzyko {
   /** np. „016818BK" — zaczyna się od zera, więc w pliku zawsze jako tekst */
   kodTaryfowy: string;
-  /** np. „00711111101111070X" */
+  /** np. „12201110100100070X" */
   kluczStatystyczny: string;
-  /** suma ubezpieczenia TEGO podryzyka, nie całego wariantu */
-  sumaUbezpieczenia: number;
+  /**
+   * Suma ubezpieczenia TEGO podryzyka, nie całego wariantu.
+   *
+   * `null` = centrala jeszcze nie podała. W jej arkuszach z kodami kolumny
+   * „Suma Ubezpieczenia (PLN)" i „…max (PLN)" są puste — wypełnione są tylko
+   * kod, klucz i składka. W szablonie do zaczytania te kolumny są liczbami,
+   * więc tej luki NIE zgadujemy: zła suma to źle opisane ryzyko w rozliczeniu
+   * z ubezpieczycielem, a wygląda zupełnie normalnie.
+   */
+  sumaUbezpieczenia: number | null;
   /** składka TEGO podryzyka; suma po wariancie = składka wariantu */
   skladkaZl: number;
 }
 
-/**
- * Klucz to identyfikator wariantu z ozk-api (w60, w90, w135, w180, w250).
- * Pusta lista = centrala jeszcze nie podała rozbicia dla tego wariantu.
- */
-export const PODRYZYKA_WARIANTU: Record<string, Podryzyko[]> = {
-  w60: [],
-  w90: [],
-  w135: [],
-  w180: [],
-  w250: [],
-};
+/** Wariant → składka podryzyka. Klucze jak w ozk-api. */
+type SkladkiNaWariant = Record<string, number>;
+
+interface WierszTabeli {
+  kodTaryfowy: string;
+  kluczStatystyczny: string;
+  sumaUbezpieczenia: number | null;
+  skladki: SkladkiNaWariant;
+}
 
 /**
- * Pośrednik i jego prowizja — jedna para dla całej agencji, ustalona
- * z centralą i niezmienna między rozliczeniami.
+ * Sześć składników pakietu EDU Plus, wprost z arkuszy centrali.
+ *
+ * Dwa ostatnie mają składkę stałą niezależnie od wariantu (1,10 i 1,20 zł) —
+ * tak jest w każdym z pięciu arkuszy i nie jest to przeoczenie.
  */
-export const UPRAWNIONY = "02/3008";
-export const PROWIZJA_PROCENT = 40;
+const TABELA: WierszTabeli[] = [
+  {
+    kodTaryfowy: "016818BK",
+    kluczStatystyczny: "12201110100100070X",
+    sumaUbezpieczenia: null,
+    skladki: { w60: 43.1, w90: 68.7, w135: 107.3, w180: 145.9, w250: 206.1 },
+  },
+  {
+    // W arkuszu 90 zł stoi tu „28018BK", bez wiodącego zera — w pozostałych
+    // czterech „028018BK", przy tym samym kluczu statystycznym. To jest zgubione
+    // zero (Excel robi to kodom wpisanym jako liczba), a nie inny kod, więc
+    // wpisujemy wersję z czterech arkuszy. Biuro ma to potwierdzić w centrali.
+    kodTaryfowy: "028018BK",
+    kluczStatystyczny: "12200070X",
+    sumaUbezpieczenia: null,
+    skladki: { w60: 6.2, w90: 9.8, w135: 16.0, w180: 22.2, w250: 31.9 },
+  },
+  {
+    kodTaryfowy: "02153018BK",
+    kluczStatystyczny: "11070X",
+    sumaUbezpieczenia: null,
+    skladki: { w60: 2.7, w90: 3.0, w135: 3.2, w180: 3.4, w250: 3.5 },
+  },
+  {
+    kodTaryfowy: "02156018BK",
+    kluczStatystyczny: "10070X",
+    sumaUbezpieczenia: null,
+    skladki: { w60: 5.7, w90: 6.2, w135: 6.2, w180: 6.2, w250: 6.2 },
+  },
+  {
+    kodTaryfowy: "184118BK",
+    kluczStatystyczny: "070X",
+    sumaUbezpieczenia: null,
+    skladki: { w60: 1.1, w90: 1.1, w135: 1.1, w180: 1.1, w250: 1.1 },
+  },
+  {
+    kodTaryfowy: "18080018BK",
+    kluczStatystyczny: "00",
+    sumaUbezpieczenia: null,
+    skladki: { w60: 1.2, w90: 1.2, w135: 1.2, w180: 1.2, w250: 1.2 },
+  },
+];
 
 /** Składki wariantów — do sprawdzenia, czy rozbicie się z nimi zgadza. */
 export const SKLADKI_WARIANTOW: Record<string, number> = {
@@ -65,6 +108,29 @@ export const SKLADKI_WARIANTOW: Record<string, number> = {
   w250: 250,
 };
 
+/**
+ * Klucz to identyfikator wariantu z ozk-api (w60, w90, w135, w180, w250).
+ * Pusta lista = centrala nie podała rozbicia dla tego wariantu.
+ */
+export const PODRYZYKA_WARIANTU: Record<string, Podryzyko[]> = Object.fromEntries(
+  Object.keys(SKLADKI_WARIANTOW).map((wariantId) => [
+    wariantId,
+    TABELA.filter((w) => w.skladki[wariantId] !== undefined).map((w) => ({
+      kodTaryfowy: w.kodTaryfowy,
+      kluczStatystyczny: w.kluczStatystyczny,
+      sumaUbezpieczenia: w.sumaUbezpieczenia,
+      skladkaZl: w.skladki[wariantId],
+    })),
+  ]),
+);
+
+/**
+ * Pośrednik i jego prowizja — jedna para dla całej agencji, ustalona
+ * z centralą i niezmienna między rozliczeniami.
+ */
+export const UPRAWNIONY = "02/3008";
+export const PROWIZJA_PROCENT = 40;
+
 export interface ProblemKonfiguracji {
   wariantId: string;
   powod: string;
@@ -73,9 +139,9 @@ export interface ProblemKonfiguracji {
 /**
  * Czy da się już rozliczyć podane warianty.
  *
- * Sprawdzamy dwie rzeczy, bo obie kończą się błędnym rozliczeniem, a żadnej
- * nie widać po samym pliku: brak rozbicia i rozbicie, które nie sumuje się do
- * składki wariantu.
+ * Każdy z tych przypadków kończy się błędnym rozliczeniem i żadnego nie widać
+ * po samym pliku — arkusz wygląda poprawnie, wywraca się dopiero import albo,
+ * gorzej, nie wywraca się wcale i rozliczamy złe dane.
  */
 export function problemyKonfiguracji(warianty: string[]): ProblemKonfiguracji[] {
   const problemy: ProblemKonfiguracji[] = [];
@@ -92,6 +158,9 @@ export function problemyKonfiguracji(warianty: string[]): ProblemKonfiguracji[] 
       problemy.push({ wariantId, powod: "podryzyko bez kodu taryfowego lub klucza" });
       continue;
     }
+    // Zgodność składek sprawdzamy ZAWSZE, nawet gdy brakuje sum ubezpieczenia.
+    // Inaczej brak sumy — dziś prawdziwy dla wszystkich wariantów — zasłaniałby
+    // rozjazd składek, czyli jedyny problem dotykający wprost pieniędzy.
     const suma = lista.reduce((s, p) => s + p.skladkaZl, 0);
     const oczekiwana = SKLADKI_WARIANTOW[wariantId];
     // Grosze: porównanie liczb zmiennoprzecinkowych wprost potrafi odrzucić
@@ -100,6 +169,16 @@ export function problemyKonfiguracji(warianty: string[]): ProblemKonfiguracji[] 
       problemy.push({
         wariantId,
         powod: `podryzyka sumują się do ${suma.toFixed(2)} zł zamiast ${oczekiwana.toFixed(2)} zł`,
+      });
+    }
+
+    const bezSumy = lista.filter((p) => p.sumaUbezpieczenia === null);
+    if (bezSumy.length > 0) {
+      problemy.push({
+        wariantId,
+        powod:
+          `brak sumy ubezpieczenia dla ${bezSumy.length} z ${lista.length} podryzyk ` +
+          `(${bezSumy.map((p) => p.kodTaryfowy).join(", ")})`,
       });
     }
   }

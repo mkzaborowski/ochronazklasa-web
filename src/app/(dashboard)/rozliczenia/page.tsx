@@ -66,6 +66,10 @@ export default async function RozliczeniaPage({
           skladkaZl: w.skladkaZl,
           osob: 1,
           podryzyk: (PODRYZYKA_WARIANTU[w.wariantId] ?? []).length,
+          // Sama liczba podryzyk nie wystarczy: rozbicie bywa niepełne (dziś
+          // brakuje w nim sum ubezpieczenia). O tym, czy wolno pobrać plik,
+          // decyduje to samo sprawdzenie, które wypisuje powody niżej.
+          gotowy: problemyKonfiguracji([w.wariantId]).length === 0,
         });
     }
     warianty = [...wg.values()].sort((a, b) => a.skladkaZl - b.skladkaZl);
