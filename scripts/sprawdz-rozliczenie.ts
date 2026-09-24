@@ -21,7 +21,8 @@ const OCZEKIWANE: { naglowek: string; typ: "tekst" | "liczba" | "data" | "pusty"
   { naglowek: "data aneksu", typ: "data", format: "mm-dd-yy" },
   { naglowek: "Imię Ubezpieczonego", typ: "tekst" },
   { naglowek: "Nazwisko Ubezpieczonego", typ: "tekst" },
-  { naglowek: "PESEL Ubezpieczonego", typ: "pusty" },
+  // W szablonie z centrali ta kolumna jest pusta; my ją wypełniamy ZAWSZE.
+  { naglowek: "PESEL Ubezpieczonego", typ: "tekst", format: "@" },
   { naglowek: "okres od", typ: "tekst" },
   { naglowek: "okres do", typ: "tekst" },
   { naglowek: "Suma Ubezpieczenia (PLN)", typ: "liczba" },
@@ -56,7 +57,6 @@ const ZESTAW = {
   dataPlatnosci: new Date("2026-10-10T12:00:00"),
   uprawniony: "02/3008",
   prowizjaProcent: 40,
-  zPeselem: false,
   podryzyka: PODRYZYKA,
 };
 
@@ -66,6 +66,7 @@ const WIERSZE = [
     imie: "Marcel",
     nazwisko: "Kowalski",
     pesel: "12232210571",
+    dataUrodzenia: "",
     okresOd: "2026-09-13",
     okresDo: "2027-09-12",
     sumaUbezpieczenia: 75000,
@@ -128,13 +129,49 @@ console.log("\n[4] numer polisy bez spacji, jak w szablonie");
     String(ws.getRow(2).getCell(1).value));
 }
 
-console.log("\n[5] PESEL tylko na wyraźne życzenie");
+console.log("\n[5] identyfikacja ubezpieczonego jest zawsze");
 {
-  const bez = await wczytaj(await plikRozliczenia(WIERSZE, ZESTAW));
-  sprawdz("domyślnie pusty, jak w szablonie", bez.getRow(2).getCell(6).value == null);
-  const z = await wczytaj(await plikRozliczenia(WIERSZE, { ...ZESTAW, zPeselem: true }));
-  sprawdz("po włączeniu wpisany", z.getRow(2).getCell(6).value === "12232210571",
-    String(z.getRow(2).getCell(6).value));
+  const ws = await wczytaj(await plikRozliczenia(WIERSZE, ZESTAW));
+  sprawdz("PESEL wpisany", ws.getRow(2).getCell(6).value === "12232210571",
+    String(ws.getRow(2).getCell(6).value));
+
+  // Co piąty ubezpieczony na produkcji nie podaje PESEL-u, tylko datę
+  // urodzenia (168 z 829). Taki wiersz NIE MOŻE wyjść z pustą identyfikacją.
+  const zData = await wczytaj(
+    await plikRozliczenia(
+      [{ ...WIERSZE[0], pesel: "", dataUrodzenia: "2019-10-10" }],
+      ZESTAW,
+    ),
+  );
+  sprawdz("bez PESEL-u staje data urodzenia", zData.getRow(2).getCell(6).value === "2019-10-10",
+    String(zData.getRow(2).getCell(6).value));
+
+  // PESEL ma pierwszeństwo, gdy są oba.
+  const oba = await wczytaj(
+    await plikRozliczenia([{ ...WIERSZE[0], dataUrodzenia: "2019-10-10" }], ZESTAW),
+  );
+  sprawdz("PESEL ma pierwszeństwo nad datą", oba.getRow(2).getCell(6).value === "12232210571",
+    String(oba.getRow(2).getCell(6).value));
+
+  // 113 PESEL-i na produkcji zaczyna się od zera. Zapisany jako liczba
+  // przestaje być PESEL-em i nie dopasuje się do osoby po stronie centrali.
+  const zZerem = await wczytaj(
+    await plikRozliczenia([{ ...WIERSZE[0], pesel: "02232210571" }], ZESTAW),
+  );
+  sprawdz("PESEL z wiodącym zerem przeżywa zapis",
+    zZerem.getRow(2).getCell(6).value === "02232210571",
+    String(zZerem.getRow(2).getCell(6).value));
+  sprawdz("i jest tekstem, nie liczbą",
+    typKomorki(zZerem.getRow(2).getCell(6).value) === "tekst");
+
+  // Żadna osoba nie może wyjść bez identyfikacji — to jedyny przypadek,
+  // którego na produkcji nie ma i nie powinien się pojawić.
+  const puste = await wczytaj(
+    await plikRozliczenia([{ ...WIERSZE[0], pesel: "", dataUrodzenia: "" }], ZESTAW),
+  );
+  sprawdz("bez obu zostaje pusto (widoczne, nie udawane)",
+    puste.getRow(2).getCell(6).value == null || puste.getRow(2).getCell(6).value === "",
+    String(puste.getRow(2).getCell(6).value));
 }
 
 console.log("\n[6] nazwa pliku");

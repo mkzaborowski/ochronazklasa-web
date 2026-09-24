@@ -5,12 +5,16 @@ import ExcelJS from "exceljs";
  *
  * To jest plik DO ZACZYTANIA po ich stronie, nie raport do czytania przez
  * człowieka. Liczy się więc nie wygląd, tylko zgodność co do kolumny i co do
- * TYPU KOMÓRKI. Dwie rzeczy z szablonu, które łatwo zepsuć i których nie widać
+ * TYPU KOMÓRKI. Trzy rzeczy z szablonu, które łatwo zepsuć i których nie widać
  * gołym okiem:
  *
  *   · „okres od" i „okres do" to TEKST („2026-09-13"), podczas gdy „data
  *     aneksu" i „data płatności" są prawdziwymi datami. Wpisanie tam daty
  *     zmieniłoby to, co zobaczy importer.
+ *   · „PESEL Ubezpieczonego" w szablonie z centrali jest PUSTY, u nas jest
+ *     zawsze wypełniony — to nasza decyzja, nie przeoczenie. PESEL wskazuje
+ *     osobę jednoznacznie; gdy go nie podano, w tej kolumnie staje data
+ *     urodzenia (patrz `identyfikacjaOsoby`).
  *   · „kod taryfowy" i „Uprawniony 1" mają format tekstowy (@), bo zaczynają
  *     się od zera — 016818BK, 02/3008. Zapisane jako liczba tracą to zero;
  *     ten sam błąd goniliśmy wcześniej przy REGON-ach.
@@ -54,12 +58,28 @@ export interface OsobaDoRozliczenia {
   numerPolisy: string;
   imie: string;
   nazwisko: string;
+  /** PESEL, jeśli podany przy zakupie; inaczej pusty */
   pesel: string;
+  /** „2019-10-10" — wpisywana zamiast PESEL-u, gdy go nie podano */
+  dataUrodzenia: string;
   okresOd: string;
   okresDo: string;
   /** suma ubezpieczenia wariantu — ta sama, którą drukuje certyfikat */
   sumaUbezpieczenia: number;
 }
+
+/**
+ * Co wpisać w kolumnę „PESEL Ubezpieczonego".
+ *
+ * PESEL JEST ZAWSZE, bo jednoznacznie wskazuje osobę i bez niego
+ * ubezpieczyciel nie ma jak dopasować zgłoszenia szkody do naszego wiersza.
+ * Co piąty ubezpieczony nie podaje jednak PESEL-u, tylko datę urodzenia —
+ * wtedy w tej kolumnie staje data. Pusto nie zostaje nigdy: wiersz bez żadnej
+ * identyfikacji to pozycja, której po stronie centrali nie da się przypisać
+ * do człowieka.
+ */
+export const identyfikacjaOsoby = (o: OsobaDoRozliczenia): string =>
+  o.pesel.trim() || o.dataUrodzenia.trim();
 
 /** Składnik pakietu: własny kod, klucz, suma ubezpieczenia i składka. */
 export interface PodryzykoDoRozliczenia {
@@ -81,8 +101,6 @@ export interface NaglowekZestawu {
   /** kod pośrednika w InterRisk, np. „02/3008" */
   uprawniony: string;
   prowizjaProcent: number;
-  /** czy wpisywać PESEL (w szablonie kolumna jest pusta) */
-  zPeselem: boolean;
   /** rozbicie wariantu na podryzyka — każde daje osobny wiersz dla każdej osoby */
   podryzyka: PodryzykoDoRozliczenia[];
 }
@@ -116,7 +134,7 @@ export async function plikRozliczenia(
         naglowek.dataAneksu,
         o.imie,
         o.nazwisko,
-        naglowek.zPeselem ? o.pesel : null,
+        identyfikacjaOsoby(o),
         o.okresOd,
         o.okresDo,
         // Suma składnika, a gdy centrala jej nie podała — suma ubezpieczenia
@@ -137,7 +155,10 @@ export async function plikRozliczenia(
       // Daty: format taki, jak w szablonie.
       r.getCell(3).numFmt = "mm-dd-yy";
       r.getCell(15).numFmt = "mm-dd-yy";
-      // Tekst, nie liczba — inaczej zniknie wiodące zero.
+      // Tekst, nie liczba — inaczej zniknie wiodące zero. Dotyczy też
+      // PESEL-u: na produkcji 113 z nich zaczyna się od zera, a zapisany
+      // jako liczba przestaje być PESEL-em i nie dopasuje się do osoby.
+      r.getCell(6).numFmt = "@";
       r.getCell(12).numFmt = "@";
       r.getCell(16).numFmt = "@";
       // Okresy ochrony zostają napisami; ExcelJS sam by ich nie zamienił, ale

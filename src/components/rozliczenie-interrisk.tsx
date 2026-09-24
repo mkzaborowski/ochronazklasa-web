@@ -41,14 +41,13 @@ export function RozliczenieInterrisk({
   const [zestaw, setZestaw] = useState("");
   const [aneks, setAneks] = useState(dzis);
   const [platnosc, setPlatnosc] = useState(dzis);
-  const [zPeselem, setZPeselem] = useState(false);
 
   const gotowe = zestaw.trim() !== "" && aneks !== "" && platnosc !== "";
 
   const link = (wariantId: string) =>
     `/api/rozliczenie?wariant=${encodeURIComponent(wariantId)}` +
     `&zestaw=${encodeURIComponent(zestaw.trim())}` +
-    `&aneks=${aneks}&platnosc=${platnosc}&pesel=${zPeselem ? "1" : "0"}`;
+    `&aneks=${aneks}&platnosc=${platnosc}`;
 
   if (warianty.length === 0) {
     return (
@@ -78,6 +77,14 @@ export function RozliczenieInterrisk({
         150 000 zł przy 250 zł). Centrala podała kody taryfowe, klucze i składki, a kolumnę
         z sumą zostawiła pustą — jeśli kiedyś przyśle rozbicie sum na poszczególne podryzyka,
         wpisujemy je i wchodzą w to miejsce.
+      </p>
+      {/* Kolumna PESEL jest w szablonie pusta, my wypełniamy ją zawsze — to
+          decyzja biura, więc niech biuro o niej wie, a nie odkrywa jej,
+          otwierając plik. Co piąty ubezpieczony ma tam datę urodzenia. */}
+      <p className="mt-1 text-xs text-muted-foreground">
+        Kolumna &bdquo;PESEL Ubezpieczonego&rdquo; jest wypełniona zawsze — jednoznacznie wskazuje osobę
+        przy zgłoszeniu szkody. Kto przy zakupie podał tylko datę urodzenia, ma w tym miejscu
+        datę; w szablonie z centrali ta kolumna jest pusta.
       </p>
 
       {problemy.length > 0 ? (
@@ -130,19 +137,6 @@ export function RozliczenieInterrisk({
           />
         </div>
       </div>
-
-      {/* W przysłanym szablonie kolumna PESEL jest pusta, ale my PESEL-e mamy.
-          Domyślnie ich nie wpisujemy — zgodnie z wzorem — i zostawiamy decyzję
-          biuru, bo to ono uzgadnia format z centralą. */}
-      <label className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-        <input
-          type="checkbox"
-          checked={zPeselem}
-          onChange={(e) => setZPeselem(e.target.checked)}
-          className="size-4"
-        />
-        Wpisz PESEL-e ubezpieczonych (w szablonie z centrali ta kolumna jest pusta)
-      </label>
 
       <ul className="mt-4 divide-y border-t">
         {warianty.map((w) => (

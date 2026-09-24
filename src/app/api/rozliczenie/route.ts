@@ -39,7 +39,6 @@ export async function GET(req: Request) {
   const nazwaKorekty = (p.get("zestaw") ?? "").trim();
   const dataAneksu = p.get("aneks") ?? "";
   const dataPlatnosci = p.get("platnosc") ?? "";
-  const zPeselem = p.get("pesel") === "1";
 
   if (!wariantId) return new Response("Brak wariantu", { status: 400 });
   if (!nazwaKorekty) return new Response("Podaj nazwę zestawu", { status: 400 });
@@ -61,6 +60,7 @@ export async function GET(req: Request) {
       imie: w.imie,
       nazwisko: w.nazwisko,
       pesel: w.pesel,
+      dataUrodzenia: w.dataUrodzenia,
       okresOd: w.okresOd,
       okresDo: w.okresDo,
       // Prosto z usługi sprzedaży — ta sama liczba, którą ten ubezpieczony ma
@@ -98,7 +98,6 @@ export async function GET(req: Request) {
     dataPlatnosci: new Date(`${dataPlatnosci}T12:00:00`),
     uprawniony: UPRAWNIONY,
     prowizjaProcent: PROWIZJA_PROCENT,
-    zPeselem,
     podryzyka,
   });
 
