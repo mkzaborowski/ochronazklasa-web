@@ -68,6 +68,17 @@ export function RozliczenieInterrisk({
         Wystawione certyfikaty z potwierdzoną płatnością, w układzie pliku do zaczytania.
         Jeden plik na polisę grupową — bo tak wygląda szablon z centrali.
       </p>
+      {/* Skąd biorą się sumy: centrala przysłała kody, klucze i składki, ale
+          kolumnę „Suma Ubezpieczenia" zostawiła pustą. Wpisujemy tam sumę
+          wariantu — tę samą, którą ubezpieczony ma na certyfikacie. Piszemy to
+          wprost, bo to jedyna liczba w pliku, która nie pochodzi wprost od
+          centrali, a biuro podpisuje się pod całym plikiem. */}
+      <p className="mt-2 text-xs text-muted-foreground">
+        Sumy ubezpieczenia w pliku to sumy z certyfikatów (29 000 zł przy składce 60 zł,
+        150 000 zł przy 250 zł). Centrala podała kody taryfowe, klucze i składki, a kolumnę
+        z sumą zostawiła pustą — jeśli kiedyś przyśle rozbicie sum na poszczególne podryzyka,
+        wpisujemy je i wchodzą w to miejsce.
+      </p>
 
       {problemy.length > 0 ? (
         <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">

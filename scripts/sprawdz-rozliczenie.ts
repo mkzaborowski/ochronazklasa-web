@@ -68,6 +68,7 @@ const WIERSZE = [
     pesel: "12232210571",
     okresOd: "2026-09-13",
     okresDo: "2027-09-12",
+    sumaUbezpieczenia: 75000,
   },
 ];
 
@@ -177,16 +178,12 @@ console.log("\n[8] konfiguracja wariantów — czy da się już rozliczać");
       `jest ${(PODRYZYKA_WARIANTU[w] ?? []).length}`);
   }
 
-  // Centrala podała kody i składki, ale NIE sumy ubezpieczenia — to ma być
-  // zgłoszone, a nie przemilczane. Gdy sumy dojdą, ten test trzeba zmienić
-  // razem z tabelą i o to chodzi: nie da się ich dopisać po cichu.
+  // Centrala podała kody i składki, ale nie rozbiła sum na podryzyka. Sumę
+  // bierzemy z wariantu (ta z certyfikatu), więc rozliczać SIĘ DA i żaden
+  // wariant nie może tu zgłaszać problemu.
   const problemy = problemyKonfiguracji(warianty);
-  sprawdz("brak sum ubezpieczenia jest zgłaszany dla każdego wariantu",
-    warianty.every((w) => problemy.some((p) => p.wariantId === w && p.powod.includes("brak sum"))),
+  sprawdz("wszystkie warianty gotowe do rozliczenia", problemy.length === 0,
     problemy.map((p) => `${p.wariantId}: ${p.powod}`).join("; ") || "brak problemów");
-  sprawdz("i nic poza tym nie jest zgłaszane",
-    problemy.every((p) => p.powod.includes("brak sum")),
-    problemy.map((p) => p.powod).filter((x) => !x.includes("brak sum")).join("; ") || "nic");
 
   // Rozbicie, które nie sumuje się do składki wariantu, musi być złapane —
   // I TO NAWET WTEDY, gdy brakuje sum ubezpieczenia. Wcześniej brak sumy
@@ -281,15 +278,20 @@ console.log("\n[9] kody i składki przepisane z pięciu arkuszy centrali");
     Object.keys(SKLADKI_WARIANTOW).every((w) => zestaw(w) === wzorzec));
 }
 
-console.log("\n[10] nieznana suma ubezpieczenia zostaje pustą komórką");
+console.log("\n[10] brak sumy podryzyka bierze sumę ubezpieczenia wariantu");
 {
   const bezSumy = PODRYZYKA.map((p) => ({ ...p, sumaUbezpieczenia: null }));
   const ws = await wczytaj(await plikRozliczenia(WIERSZE, { ...ZESTAW, podryzyka: bezSumy }));
   const r = ws.getRow(2);
-  // Pusta, a NIE zero: zero znaczyłoby „ryzyko na 0 zł" i przeszłoby import.
-  sprawdz("Suma Ubezpieczenia pusta", r.getCell(9).value == null, String(r.getCell(9).value));
-  sprawdz("Suma Ubezpieczenia max pusta", r.getCell(10).value == null, String(r.getCell(10).value));
-  sprawdz("reszta wiersza bez zmian", r.getCell(12).value === "016818BK" && r.getCell(11).value === 1);
+  // 75 000 zł to suma z certyfikatu wariantu 135 zł — ta, którą dostał klient.
+  sprawdz("Suma Ubezpieczenia z wariantu", r.getCell(9).value === 75000, String(r.getCell(9).value));
+  sprawdz("Suma Ubezpieczenia max z wariantu", r.getCell(10).value === 75000, String(r.getCell(10).value));
+  sprawdz("nadal liczba, nie tekst", typKomorki(r.getCell(9).value) === "liczba");
+
+  // Gdy centrala poda sumę podryzyka, ma ona pierwszeństwo nad sumą wariantu.
+  const zSuma = await wczytaj(await plikRozliczenia(WIERSZE, ZESTAW));
+  sprawdz("suma podryzyka ma pierwszeństwo", zSuma.getRow(2).getCell(9).value === 20000,
+    String(zSuma.getRow(2).getCell(9).value));
 }
 
 console.log(bledy === 0 ? "\nPlik zgodny z szablonem." : `\n${bledy} niezgodności.`);

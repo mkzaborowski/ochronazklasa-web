@@ -57,13 +57,18 @@ export interface OsobaDoRozliczenia {
   pesel: string;
   okresOd: string;
   okresDo: string;
+  /** suma ubezpieczenia wariantu — ta sama, którą drukuje certyfikat */
+  sumaUbezpieczenia: number;
 }
 
 /** Składnik pakietu: własny kod, klucz, suma ubezpieczenia i składka. */
 export interface PodryzykoDoRozliczenia {
   kodTaryfowy: string;
   kluczStatystyczny: string;
-  /** `null` = centrala nie podała; komórka zostaje pusta, nie zerowa */
+  /**
+   * Suma TEGO składnika, jeśli centrala ją podała. `null` = bierzemy sumę
+   * ubezpieczenia wariantu, czyli tę z certyfikatu.
+   */
   sumaUbezpieczenia: number | null;
   skladkaZl: number;
 }
@@ -114,10 +119,10 @@ export async function plikRozliczenia(
         naglowek.zPeselem ? o.pesel : null,
         o.okresOd,
         o.okresDo,
-        // Nieznana suma zostaje PUSTA, nie zerowa: zero to konkretna deklaracja
-        // („ryzyko na 0 zł"), a pusta komórka widać przy imporcie.
-        pr.sumaUbezpieczenia,
-        pr.sumaUbezpieczenia,
+        // Suma składnika, a gdy centrala jej nie podała — suma ubezpieczenia
+        // wariantu, ta sama, którą ubezpieczony ma wydrukowaną na certyfikacie.
+        pr.sumaUbezpieczenia ?? o.sumaUbezpieczenia,
+        pr.sumaUbezpieczenia ?? o.sumaUbezpieczenia,
         1,
         pr.kodTaryfowy,
         pr.kluczStatystyczny,

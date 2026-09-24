@@ -63,6 +63,10 @@ export async function GET(req: Request) {
       pesel: w.pesel,
       okresOd: w.okresOd,
       okresDo: w.okresDo,
+      // Prosto z usługi sprzedaży — ta sama liczba, którą ten ubezpieczony ma
+      // na swoim certyfikacie. Nie przepisujemy jej do panelu osobno, żeby nie
+      // mogła się rozjechać z tym, co dostał klient.
+      sumaUbezpieczenia: w.sumaUbezpieczenia,
     }));
   } catch (error) {
     return new Response(

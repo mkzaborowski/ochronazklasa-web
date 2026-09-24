@@ -27,13 +27,18 @@ export interface Podryzyko {
   /** np. „12201110100100070X" */
   kluczStatystyczny: string;
   /**
-   * Suma ubezpieczenia TEGO podryzyka, nie całego wariantu.
+   * Suma ubezpieczenia TEGO podryzyka, jeśli centrala ją poda.
    *
-   * `null` = centrala jeszcze nie podała. W jej arkuszach z kodami kolumny
-   * „Suma Ubezpieczenia (PLN)" i „…max (PLN)" są puste — wypełnione są tylko
-   * kod, klucz i składka. W szablonie do zaczytania te kolumny są liczbami,
-   * więc tej luki NIE zgadujemy: zła suma to źle opisane ryzyko w rozliczeniu
-   * z ubezpieczycielem, a wygląda zupełnie normalnie.
+   * `null` — i tak jest dziś dla wszystkich sześciu — znaczy „weź sumę
+   * ubezpieczenia wariantu", czyli tę wydrukowaną na certyfikacie: 29 000 zł
+   * przy 60 zł składki, 150 000 zł przy 250 zł. W arkuszach z kodami centrala
+   * zostawiła kolumny „Suma Ubezpieczenia (PLN)" puste, a system tę liczbę ma
+   * i podaje ją klientowi, więc bierzemy ją stamtąd zamiast zgadywać.
+   *
+   * UWAGA NA PRZYSZŁOŚĆ: w przykładowym pliku z centrali (pakiet 79 zł) cztery
+   * z sześciu podryzyk miały sumy INNE niż suma polisy — 4 000, 15 000, 5 000
+   * i 5 000 przy polisie na 20 000. Jeśli centrala poda takie rozbicie i dla
+   * naszych wariantów, wpisuje się je tutaj i ma pierwszeństwo.
    */
   sumaUbezpieczenia: number | null;
   /** składka TEGO podryzyka; suma po wariancie = składka wariantu */
@@ -172,21 +177,6 @@ export function problemyKonfiguracji(warianty: string[]): ProblemKonfiguracji[] 
       });
     }
 
-    const bezSumy = lista.filter((p) => p.sumaUbezpieczenia === null);
-    if (bezSumy.length > 0) {
-      // Gdy brakuje WSZĘDZIE — a tak jest dziś — wypisywanie kodów daje pięć
-      // identycznych linijek po sześć kodów i trzeba je przeczytać, żeby
-      // dowiedzieć się jednej rzeczy. Kody wymieniamy dopiero wtedy, gdy część
-      // sum jest, bo wtedy wskazują, czego konkretnie dopytać w centrali.
-      problemy.push({
-        wariantId,
-        powod:
-          bezSumy.length === lista.length
-            ? "brak sum ubezpieczenia — centrala podała tylko kody, klucze i składki"
-            : `brak sumy ubezpieczenia dla ${bezSumy.length} z ${lista.length} podryzyk ` +
-              `(${bezSumy.map((p) => p.kodTaryfowy).join(", ")})`,
-      });
-    }
   }
   return problemy;
 }
