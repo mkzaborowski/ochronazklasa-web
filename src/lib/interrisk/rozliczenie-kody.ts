@@ -174,11 +174,17 @@ export function problemyKonfiguracji(warianty: string[]): ProblemKonfiguracji[] 
 
     const bezSumy = lista.filter((p) => p.sumaUbezpieczenia === null);
     if (bezSumy.length > 0) {
+      // Gdy brakuje WSZĘDZIE — a tak jest dziś — wypisywanie kodów daje pięć
+      // identycznych linijek po sześć kodów i trzeba je przeczytać, żeby
+      // dowiedzieć się jednej rzeczy. Kody wymieniamy dopiero wtedy, gdy część
+      // sum jest, bo wtedy wskazują, czego konkretnie dopytać w centrali.
       problemy.push({
         wariantId,
         powod:
-          `brak sumy ubezpieczenia dla ${bezSumy.length} z ${lista.length} podryzyk ` +
-          `(${bezSumy.map((p) => p.kodTaryfowy).join(", ")})`,
+          bezSumy.length === lista.length
+            ? "brak sum ubezpieczenia — centrala podała tylko kody, klucze i składki"
+            : `brak sumy ubezpieczenia dla ${bezSumy.length} z ${lista.length} podryzyk ` +
+              `(${bezSumy.map((p) => p.kodTaryfowy).join(", ")})`,
       });
     }
   }

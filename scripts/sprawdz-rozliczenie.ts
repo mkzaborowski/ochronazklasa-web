@@ -182,11 +182,11 @@ console.log("\n[8] konfiguracja wariantów — czy da się już rozliczać");
   // razem z tabelą i o to chodzi: nie da się ich dopisać po cichu.
   const problemy = problemyKonfiguracji(warianty);
   sprawdz("brak sum ubezpieczenia jest zgłaszany dla każdego wariantu",
-    warianty.every((w) => problemy.some((p) => p.wariantId === w && p.powod.includes("brak sumy"))),
+    warianty.every((w) => problemy.some((p) => p.wariantId === w && p.powod.includes("brak sum"))),
     problemy.map((p) => `${p.wariantId}: ${p.powod}`).join("; ") || "brak problemów");
   sprawdz("i nic poza tym nie jest zgłaszane",
-    problemy.every((p) => p.powod.includes("brak sumy")),
-    problemy.map((p) => p.powod).filter((x) => !x.includes("brak sumy")).join("; ") || "nic");
+    problemy.every((p) => p.powod.includes("brak sum")),
+    problemy.map((p) => p.powod).filter((x) => !x.includes("brak sum")).join("; ") || "nic");
 
   // Rozbicie, które nie sumuje się do składki wariantu, musi być złapane —
   // I TO NAWET WTEDY, gdy brakuje sum ubezpieczenia. Wcześniej brak sumy
