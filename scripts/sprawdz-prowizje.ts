@@ -9,6 +9,7 @@
  * Uruchamia się samym node (strip-types), bez bazy i bez Next.js.
  */
 import {
+  podstawaProwizji,
   podzielSprzedaz,
   stawkiSpojne,
   zestawWyplaty,
@@ -61,10 +62,28 @@ console.log("\n[4] nieokrągłe kwoty — grosz nie ginie przy zaokrąglaniu");
   }
 }
 
-console.log("\n[5] stawki nie przekraczają puli");
+console.log("\n[5] podstawa prowizji — tylko od pieniędzy, które wpłynęły");
+{
+  // Sierpień 2026, prawdziwy wniosek: bramkę testowano złotówką przy wariancie
+  // za 60 zł, a certyfikat wystawił się normalnie. Prowizja liczona od wariantu
+  // rozdałaby 24 zł, których nikt nie wpłacił.
+  sprawdz("zakup testowy: podstawą jest złotówka, nie wariant",
+    podstawaProwizji(100, 6000) === 100, zl(podstawaProwizji(100, 6000)));
+  sprawdz("i prowizja z tego to 40 gr, a nie 24 zł",
+    podzielSprzedaz(podstawaProwizji(100, 6000), "bez_agenta").pula === 40,
+    zl(podzielSprzedaz(podstawaProwizji(100, 6000), "bez_agenta").pula));
+
+  sprawdz("zwykła sprzedaż: bez zmian", podstawaProwizji(13500, 13500) === 13500);
+  sprawdz("troje dzieci w jednym wniosku", podstawaProwizji(40500, 40500) === 40500);
+  // Nadpłata nie jest składką — wróci do klienta, więc jej nie dzielimy.
+  sprawdz("nadpłata nie podnosi prowizji", podstawaProwizji(20000, 13500) === 13500,
+    zl(podstawaProwizji(20000, 13500)));
+}
+
+console.log("\n[6] stawki nie przekraczają puli");
 sprawdz("20 + 5 ≤ 40 i 10 ≤ 40", stawkiSpojne());
 
-console.log("\n[6] zestawienie — kto ile dostaje");
+console.log("\n[7] zestawienie — kto ile dostaje");
 {
   const s = (
     id: string, gr: number, rodzaj: SprzedazDoPodzialu["rodzaj"],

@@ -75,6 +75,25 @@ export function podzielSprzedaz(skladkaGr: number, rodzaj: RodzajSprzedazy): Pod
   return { pula, agent, administrator, szef: pula - agent - administrator };
 }
 
+/**
+ * Podstawa prowizji dla jednego wniosku.
+ *
+ * Bierzemy MNIEJSZĄ z dwóch kwot: tej faktycznie pobranej przez bramkę i tej,
+ * która wynika z wariantu. Zwykle są równe i nie ma o czym mówić — różnią się
+ * w dwóch przypadkach i oba kończą się wypłatą nie z tych pieniędzy:
+ *
+ *   · pobrano MNIEJ (zakup testowy bramki: złotówka za polisę za 60 zł) —
+ *     prowizja od 60 zł byłaby wypłatą z pieniędzy, które nigdy nie wpłynęły;
+ *   · pobrano WIĘCEJ (nadpłata, pomyłka w przelewie) — nadwyżka nie jest
+ *     składką i wróci do klienta, więc nie dzielimy jej między agentów.
+ *
+ * Cicha zgoda na którykolwiek z nich wyszłaby dopiero wtedy, gdyby ktoś ręcznie
+ * przeliczył jedną sprzedaż — a wypłaty idą wcześniej.
+ */
+export function podstawaProwizji(pobranoGr: number, wgWariantuGr: number): number {
+  return Math.min(pobranoGr, wgWariantuGr);
+}
+
 /** Stawki nie mogą przekraczać puli — inaczej udział szefa wyszedłby ujemny. */
 export function stawkiSpojne(): boolean {
   const zAgentem = STAWKI.zAgentem.agent + STAWKI.zAgentem.administrator;

@@ -5,6 +5,7 @@ import { dzienWarszawski } from "@/lib/statystyki/dzienne";
 import {
   ADMINISTRATOR,
   SZEF,
+  podstawaProwizji,
   podzielSprzedaz,
   zestawWyplaty,
   type Podzial,
@@ -28,6 +29,11 @@ import {
 export interface SprzedazWRaporcie extends SprzedazDoPodzialu {
   podzial: Podzial;
   certyfikaty: string[];
+  /**
+   * Składka wg wariantu. Różni się od `skladkaGr` (kwoty pobranej) tylko przy
+   * zakupie testowym bramki — i wtedy trzeba to pokazać, a nie przemilczeć.
+   */
+  wgWariantuGr: number;
 }
 
 export interface RaportProwizji {
@@ -58,15 +64,21 @@ export async function raportProwizji(od: string, do_: string): Promise<RaportPro
   // sprzedaż za trzykrotną składkę.
   const wgWniosku = new Map<
     string,
-    { dzien: string; skladkaGr: number; osob: number; kod: string | null; certyfikaty: string[] }
+    {
+      dzien: string; pobranoGr: number; wgWariantuGr: number; osob: number;
+      kod: string | null; certyfikaty: string[];
+    }
   >();
   for (const w of wiersze) {
     const dzien = dzienWarszawski(zSqlite(w.utworzono));
     if (dzien < od || dzien > do_) continue;
+    // Kwota pobrana dotyczy CAŁEGO wniosku i powtarza się w każdym jego
+    // wierszu — bierzemy ją raz, nie sumujemy po osobach.
     const s = wgWniosku.get(w.wniosekId) ?? {
-      dzien, skladkaGr: 0, osob: 0, kod: w.kodAgenta, certyfikaty: [],
+      dzien, pobranoGr: Math.round(w.kwotaWnioskuZl * 100), wgWariantuGr: 0, osob: 0,
+      kod: w.kodAgenta, certyfikaty: [],
     };
-    s.skladkaGr += Math.round(w.skladkaZl * 100);
+    s.wgWariantuGr += Math.round(w.skladkaZl * 100);
     s.osob += 1;
     if (w.numerCertyfikatu) s.certyfikaty.push(w.numerCertyfikatu);
     wgWniosku.set(w.wniosekId, s);
@@ -90,16 +102,19 @@ export async function raportProwizji(od: string, do_: string): Promise<RaportPro
       : agent
         ? "agent"
         : "kod_nierozstrzygniety";
+    // Prowizja od tego, co naprawdę wpłynęło — patrz `podstawaProwizji`.
+    const skladkaGr = podstawaProwizji(s.pobranoGr, s.wgWariantuGr);
     return {
       wniosekId,
       dzien: s.dzien,
-      skladkaGr: s.skladkaGr,
+      skladkaGr,
+      wgWariantuGr: s.wgWariantuGr,
       osob: s.osob,
       kod: kod ?? kodSurowy,
       rodzaj,
       agentId: agent?.id ?? null,
       agentNazwa: agent?.name ?? null,
-      podzial: podzielSprzedaz(s.skladkaGr, rodzaj),
+      podzial: podzielSprzedaz(skladkaGr, rodzaj),
       certyfikaty: s.certyfikaty,
     };
   });
