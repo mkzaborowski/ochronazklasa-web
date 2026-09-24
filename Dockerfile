@@ -35,5 +35,9 @@ COPY --from=build /app/next.config.ts ./next.config.ts
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/templates ./templates
 COPY --from=build /app/scripts ./scripts
+# Skrypty obsługowe importują moduły z src/lib (szablony listów, klient
+# poczty) i uruchamiają je przez --experimental-strip-types. Bez tego
+# katalogu działają tylko lokalnie, a potrzebne są na serwerze.
+COPY --from=build /app/src/lib ./src/lib
 EXPOSE 3000
 CMD ["npm", "run", "start"]
