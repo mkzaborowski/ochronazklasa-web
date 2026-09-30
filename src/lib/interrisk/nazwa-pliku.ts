@@ -111,3 +111,27 @@ export function nazwaPlikuUlotki(dane: {
   const szablon = bezpieczny(dane.szablon) || "ulotka";
   return opis ? `${opis}_ulotka_${szablon}.pdf` : `ulotka_${szablon}.pdf`;
 }
+
+/**
+ * „ANEKS 679857 SP 5 Słupsk.docx"
+ *
+ * Kolejność ustaliło biuro: najpierw słowo ANEKS i numer polisy, potem skrót
+ * szkoły. Odwrotnie niż przy polisie — i celowo: aneksy leżą w tym samym
+ * katalogu co polisy, a wielkie „ANEKS" na początku odkłada je w jedną grupę,
+ * zamiast mieszać z polisami tej samej szkoły.
+ *
+ * Skrót ma pierwszeństwo przed pełną nazwą z tego samego powodu co przy
+ * polisie; bez żadnej nazwy zostaje samo „ANEKS 679857.docx".
+ */
+export function nazwaPlikuAneksu(dane: {
+  numerPolisy: string;
+  etykieta?: string | null;
+  szkola?: string | null;
+}): string {
+  const czlony = ["ANEKS"];
+  const numer = bezpieczny(dane.numerPolisy ?? "");
+  if (numer) czlony.push(numer);
+  const opis = skroc(bezpieczny(dane.etykieta ?? "") || bezpieczny(dane.szkola ?? ""), MAKS_SZKOLA);
+  if (opis) czlony.push(opis);
+  return `${czlony.join(" ")}.docx`;
+}

@@ -36,6 +36,9 @@ jobs:
       # że suma wypłat zawsze równa się prowizji od InterRisk co do grosza.
       - run: npm run check:prowizje
       - run: npm run check:numeracja
+      # Aneksy: kwota do zapłaty i treść Worda. Błąd w liczeniu wyszedłby na
+      # każdym aneksie naraz, a szkoła płaci tyle, ile stoi w dokumencie.
+      - run: npm run check:aneksy
       # Ulotki przychodzą od dostawcy WYPEŁNIONE przykładem. Pole, któremu przy
       # budowie mapy nie nadano roli, nie jest nadpisywane - i cudza szkoła albo
       # cudzy opiekun jedzie na ulotce każdej placówki.

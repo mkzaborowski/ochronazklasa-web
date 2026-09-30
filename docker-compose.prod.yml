@@ -41,6 +41,11 @@ services:
     env_file: .env
     expose:
       - "3000"
+    # Pliki, których NIE MOŻE być w obrazie, bo obraz i repozytorium są
+    # publiczne - np. skan podpisu do aneksów (zasoby/podpis-aneks.png).
+    # Katalog leży w /opt/ochrona/zasoby na serwerze; tylko do odczytu.
+    volumes:
+      - ./zasoby:/app/zasoby:ro
 
   caddy:
     image: caddy:2

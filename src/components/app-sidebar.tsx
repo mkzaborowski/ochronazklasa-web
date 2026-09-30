@@ -15,6 +15,8 @@ import {
   Database,
   FileSpreadsheet,
   UserCog,
+  FilePen,
+  Files,
 } from "lucide-react";
 
 import {
@@ -43,6 +45,8 @@ const nav = [
     label: "Polisy",
     items: [
       { title: "Wystaw polisę (InterRisk)", href: "/schools/new", icon: FilePlus2 },
+      { title: "Wystaw aneks", href: "/aneksy/nowy", icon: FilePen },
+      { title: "Aneksy", href: "/aneksy", icon: Files },
       { title: "Szkoły / Ubezpieczający", href: "/schools", icon: School },
       { title: "Wszystkie polisy", href: "/policies", icon: FileText },
     ],
@@ -112,10 +116,15 @@ export function AppSidebar({ user }: { user: UserInfo | null }) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
+                  // Wygrywa NAJDŁUŻSZE pasujące łącze: na /aneksy/nowy
+                  // podświetla się „Wystaw aneks", a nie także „Aneksy".
+                  const pasuje = (href: string) =>
+                    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
                   const active =
-                    item.href === "/"
-                      ? pathname === "/"
-                      : pathname.startsWith(item.href);
+                    pasuje(item.href) &&
+                    !nav.some((g) =>
+                      g.items.some((x) => x.href.length > item.href.length && pasuje(x.href)),
+                    );
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton

@@ -247,6 +247,7 @@ model School {
   policies     GeneratedPolicy[]
   bankAccounts BankAccount[]
   flyers       GeneratedFlyer[]
+  aneksy       Aneks[]
 
   @@index([regonPesel])
   @@index([agentId])
@@ -396,4 +397,48 @@ model PowiadomienieSprzedazy {
   wyslano   DateTime @default(now())
 
   @@index([agentId])
+}
+
+// Aneks do polisy grupowej InterRisk, wystawiany w zakładce „Wystaw aneks".
+//
+// Trzymamy DANE, a nie gotowy plik: Word składa się przy każdym pobraniu ze
+// wzoru templates/aneksy/aneks-interrisk.docx. Dzięki temu poprawka aneksu to
+// zwykła edycja formularza, a nie ponowne wgrywanie dokumentu.
+//
+// Numer aneksu i numer polisy są WPISYWANE RĘCZNIE, a nie nadawane przez
+// program - biuro część aneksów wystawia poza programem i numeracja musi
+// zgadzać się z tamtymi. Dlatego nie ma tu unikalności: powtórzony numer do
+// tej samej polisy program tylko zgłasza i prosi o potwierdzenie.
+//
+// Zapis jest wspólny dla całego biura. Kilka osób wystawia aneksy naraz bez
+// żadnej blokady; przed nadpisaniem cudzych zmian chroni `updatedAt`
+// (edycja przechodzi tylko, jeśli nikt nie zapisał aneksu w międzyczasie).
+model Aneks {
+  id                   String   @id @default(cuid())
+  numerAneksu          String
+  // same cyfry, np. "679857" - seria "A-A" jest we wzorze
+  numerPolisy          String
+  dataAneksu           DateTime @db.Date
+  nazwaSzkoly          String
+  // skrót do nazwy pliku, jak "Ubezpieczenie dla" przy polisie
+  etykieta             String?
+  rokSzkolny           String
+  liczbaUbezpieczonych Int
+  liczbaZwolnionych    Int      @default(0)
+  skladkaGrosze        Int
+  // punkty § 1 dopisane ręcznie, po stałych punktach 1 i 2 (tablica tekstów)
+  dodatkowePunkty      Json     @default("[]")
+
+  // polisa z programu, jeśli numer się w nim znalazł; aneks do polisy
+  // wystawionej ręcznie po prostu jej nie ma
+  schoolId String?
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([numerPolisy])
+  @@index([createdAt])
 }

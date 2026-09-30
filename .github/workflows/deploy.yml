@@ -46,6 +46,9 @@ jobs:
       # że suma wypłat zawsze równa się prowizji od InterRisk co do grosza.
       - run: npm run check:prowizje
       - run: npm run check:numeracja
+      # Aneksy: kwota do zapłaty i treść Worda. Błąd w liczeniu wyszedłby na
+      # każdym aneksie naraz, a szkoła płaci tyle, ile stoi w dokumencie.
+      - run: npm run check:aneksy
       # check:ulotki czyta tekst gotowego PDF-a, żeby sprawdzić, co NAPRAWDĘ
       # wyszło na wydruku - do tego potrzebny jest pdftotext z poppler-utils.
       - run: sudo apt-get update && sudo apt-get install -y poppler-utils

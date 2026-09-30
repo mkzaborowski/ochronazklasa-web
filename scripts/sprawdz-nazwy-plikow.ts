@@ -8,7 +8,11 @@
  *
  * Uruchamia się samym node (strip-types), bez bazy i bez Next.js.
  */
-import { nazwaPlikuPolisy, nazwaPlikuUlotki } from "../src/lib/interrisk/nazwa-pliku.ts";
+import {
+  nazwaPlikuAneksu,
+  nazwaPlikuPolisy,
+  nazwaPlikuUlotki,
+} from "../src/lib/interrisk/nazwa-pliku.ts";
 
 const ZAKAZANE = /[<>:"/\\|?*]/;
 
@@ -152,6 +156,42 @@ for (const u of ulotki) {
   console.log(
     `${problemy.length ? "BŁĄD" : "OK  "} (${String(wynik.length).padStart(3)}) ${wynik}` +
       `   // ${u.po_co}${problemy.length ? ` [${problemy.join("; ")}]` : ""}`,
+  );
+}
+
+// --- aneksy: ANEKS + numer polisy + skrót, w tej kolejności (życzenie biura) ---
+const aneksy: { dane: Parameters<typeof nazwaPlikuAneksu>[0]; oczekiwana: string; po_co: string }[] = [
+  {
+    dane: { numerPolisy: "679857", etykieta: "SP 5 Słupsk", szkola: "Szkoła Podstawowa nr 5" },
+    oczekiwana: "ANEKS 679857 SP 5 Słupsk.docx",
+    po_co: "PRZYPADEK ZE ZGŁOSZENIA: ANEKS, numer polisy, skrót",
+  },
+  {
+    dane: { numerPolisy: "679870", etykieta: "  ", szkola: "Fundacja IN ALTUM" },
+    oczekiwana: "ANEKS 679870 Fundacja IN ALTUM.docx",
+    po_co: "pusty skrót = pełna nazwa szkoły",
+  },
+  {
+    dane: { numerPolisy: "679871", etykieta: "SP 3 Łódź / filia?", szkola: null },
+    oczekiwana: "ANEKS 679871 SP 3 Łódź filia.docx",
+    po_co: "ukośnik i pytajnik z ręcznie wpisanego skrótu nie psują pliku",
+  },
+  {
+    dane: { numerPolisy: "679872", etykieta: null, szkola: null },
+    oczekiwana: "ANEKS 679872.docx",
+    po_co: "bez nazwy zostaje sam numer",
+  },
+];
+
+for (const a of aneksy) {
+  const wynik = nazwaPlikuAneksu(a.dane);
+  const problemy: string[] = [];
+  if (wynik !== a.oczekiwana) problemy.push(`oczekiwano „${a.oczekiwana}"`);
+  if (ZAKAZANE.test(wynik)) problemy.push("znak zakazany w nazwie pliku");
+  if (problemy.length) bledy++;
+  console.log(
+    `${problemy.length ? "BŁĄD" : "OK  "} (${String(wynik.length).padStart(3)}) ${wynik}` +
+      `   // ${a.po_co}${problemy.length ? ` [${problemy.join("; ")}]` : ""}`,
   );
 }
 
