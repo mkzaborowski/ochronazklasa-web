@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { dzienWarszawski } from "@/lib/statystyki/dzienne";
 import { paczkaRozliczen } from "@/lib/interrisk/paczka";
 import { nazwaZestawu, okresDlaDnia, plusDni } from "@/lib/interrisk/okres";
+import { PROWIZJA_PROCENT as PROWIZJA } from "@/lib/interrisk/rozliczenie-kody";
 import { wyslijList, pocztaSkonfigurowana } from "@/lib/powiadomienia/poczta";
 
 /**
@@ -89,9 +90,25 @@ export async function wyslijRozliczenie(opcje: { naSile?: boolean; dzis?: string
     };
     const paczka = await paczkaRozliczen(okres, zestaw);
 
-    const linie = paczka.warianty.map(
-      (w) => `  ${w.numerPolisy} — ${w.osob} ubezpieczonych, ${w.wierszy} wierszy`,
+    const pln = (x: number) =>
+      x.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " zł";
+    const z = paczka.zestawienie;
+    const linie = z.wiersze.map(
+      (w) =>
+        `  ${w.numerPolisy} (${w.skladkaJednostkowaZl} zł) — ${w.osob} osób, ` +
+        `składka ${pln(w.skladkaLacznieZl)}, prowizja ${pln(w.prowizjaZl)}`,
     );
+    // Kwoty w treści, nie tylko w załączniku: osoba uzgadniająca rozliczenie
+    // najpierw czyta maila, a dopiero potem otwiera arkusz — jeśli w ogóle.
+    const podsumowanie = [
+      "",
+      `Składka łącznie:  ${pln(z.sumy.skladkaZl)}`,
+      `Prowizja (${PROWIZJA}%):   ${pln(z.sumy.prowizjaZl)}`,
+      `Do przekazania:   ${pln(z.sumy.doPrzekazaniaZl)}`,
+    ];
+    const uwagi = z.rozbieznosci.length
+      ? ["", `UWAGA: ${z.rozbieznosci.length} wniosków z inną wpłatą niż składka polisy — wyjaśniamy po naszej stronie.`]
+      : [];
     const ostrzezenia = paczka.pominieto.length
       ? ["", "UWAGA, pominięte warianty:", ...paczka.pominieto.map((p) => `  ${p.wariantId} — ${p.powod}`)]
       : [];
@@ -104,8 +121,12 @@ export async function wyslijRozliczenie(opcje: { naSile?: boolean; dzis?: string
         "",
         `w załączeniu rozliczenie sprzedaży online za okres ${okres.od} – ${okres.do}.`,
         "",
-        `Plików w paczce: ${paczka.warianty.length}, ubezpieczonych łącznie: ${paczka.osobLacznie}.`,
+        `Plików w paczce: ${paczka.warianty.length + 1} (arkusze osobowe i zestawienie finansowe),`,
+        `ubezpieczonych łącznie: ${paczka.osobLacznie}.`,
+        "",
         ...linie,
+        ...podsumowanie,
+        ...uwagi,
         ...ostrzezenia,
         "",
         "Wiadomość wysłana automatycznie z panelu Ochrona z Klasą.",

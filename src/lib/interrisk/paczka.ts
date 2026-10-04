@@ -6,6 +6,8 @@ import {
   type OsobaDoRozliczenia,
 } from "@/lib/interrisk/rozliczenie";
 import { wOkresie } from "@/lib/interrisk/okres";
+import { zestawienieFinansowe, type Zestawienie } from "@/lib/interrisk/zestawienie";
+import { KONFIGURACJA, nazwaPlikuZestawienia, plikZestawienia } from "@/lib/interrisk/zestawienie-plik";
 import {
   PODRYZYKA_WARIANTU,
   problemyKonfiguracji,
@@ -57,6 +59,8 @@ export interface Paczka {
   /** warianty ze sprzedażą, których NIE dało się złożyć — z powodem */
   pominieto: { wariantId: string; powod: string }[];
   osobLacznie: number;
+  /** podsumowanie finansowe tej samej sprzedaży — leży w paczce jako osobny plik */
+  zestawienie: Zestawienie;
 }
 
 /** Sprzedaż z okresu, pogrupowana po wariancie. Kolejność jak w pliku. */
@@ -146,6 +150,15 @@ export async function paczkaRozliczen(
     }
   }
 
+  // Zestawienie liczone z TYCH SAMYCH wierszy, co arkusze wyżej — stąd `wg`,
+  // a nie drugie zapytanie. Wchodzi do paczki tylko dla wariantów, które
+  // naprawdę się złożyły, żeby podsumowanie nie opisywało pliku, którego nie ma.
+  const zlozone = new Map([...wg.entries()].filter(([id]) => warianty.some((w) => w.wariantId === id)));
+  const zestawienie = zestawienieFinansowe(zlozone, okres, KONFIGURACJA);
+  if (warianty.length > 0) {
+    zip.file(nazwaPlikuZestawienia(zestaw.nazwaKorekty), await plikZestawienia(zestawienie, zestaw));
+  }
+
   if (warianty.length === 0) {
     throw new Error(
       pominieto.length > 0
@@ -160,6 +173,7 @@ export async function paczkaRozliczen(
     warianty,
     pominieto,
     osobLacznie,
+    zestawienie,
   };
 }
 

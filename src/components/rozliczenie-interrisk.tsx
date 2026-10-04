@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, FileArchive, FileSpreadsheet } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, FileArchive, FileSpreadsheet, Wallet } from "lucide-react";
+import type { Zestawienie } from "@/lib/interrisk/zestawienie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,34 @@ export function RozliczenieInterrisk({
   const link = (wariantId: string) =>
     `/api/rozliczenie?wariant=${encodeURIComponent(wariantId)}&${parametry}`;
   const linkPaczki = `/api/rozliczenie/zip?${parametry}`;
+  const linkZestawienia = `/api/rozliczenie/zestawienie?${parametry}`;
+
+  // Podgląd zestawienia liczy serwer z tych samych wierszy, z których powstaną
+  // pliki — gdyby liczyć go tutaj osobno, tabela na ekranie i arkusz w paczce
+  // mogłyby kiedyś pokazać dwie różne kwoty i nie byłoby wiadomo, która jest
+  // prawdziwa.
+  const [zestawienie, setZestawienie] = useState<Zestawienie | null>(null);
+  const [bladZestawienia, setBladZestawienia] = useState<string | null>(null);
+  useEffect(() => {
+    if (od === "" || do_ === "" || od > do_) return;
+    const porzucenie = new AbortController();
+    fetch(`/api/rozliczenie/zestawienie?format=json&od=${od}&do=${do_}`, {
+      signal: porzucenie.signal,
+    })
+      .then(async (o) => {
+        if (!o.ok) throw new Error(await o.text());
+        return o.json();
+      })
+      .then((x: Zestawienie) => {
+        setZestawienie(x);
+        setBladZestawienia(null);
+      })
+      .catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setBladZestawienia(e instanceof Error ? e.message : String(e));
+      });
+    return () => porzucenie.abort();
+  }, [od, do_]);
 
   if (warianty.length === 0) {
     return (
@@ -165,6 +194,12 @@ export function RozliczenieInterrisk({
         </div>
       </div>
 
+      <ZestawienieFinansowe
+        zestawienie={zestawienie}
+        blad={bladZestawienia}
+        link={gotowe ? linkZestawienia : null}
+      />
+
       <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 p-3">
         <Button
           nativeButton={false}
@@ -174,7 +209,8 @@ export function RozliczenieInterrisk({
           <FileArchive className="size-4" /> Pobierz wszystkie w zip
         </Button>
         <span className="text-xs text-muted-foreground">
-          Po jednym pliku na wariant ze sprzedażą w tym okresie — zamiast pobierania po kolei.
+          Arkusze osobowe wszystkich wariantów ze sprzedażą w tym okresie plus zestawienie
+          finansowe — w jednej paczce.
         </span>
       </div>
 
@@ -211,6 +247,116 @@ export function RozliczenieInterrisk({
         <p className="mt-3 text-xs text-muted-foreground">
           Uzupełnij nazwę zestawu, okres i obie daty — wchodzą do każdego wiersza pliku.
         </p>
+      ) : null}
+    </div>
+  );
+}
+
+const pln = (x: number) =>
+  x.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " zł";
+
+/**
+ * Zestawienie finansowe — to, co centrala porównuje ze swoimi kwotami.
+ *
+ * Pokazujemy je na ekranie, a nie tylko w pliku, bo przy uzgadnianiu kwot
+ * przez telefon nikt nie będzie otwierał arkusza.
+ */
+function ZestawienieFinansowe({
+  zestawienie,
+  blad,
+  link,
+}: {
+  zestawienie: Zestawienie | null;
+  blad: string | null;
+  link: string | null;
+}) {
+  if (blad) {
+    return (
+      <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+        Nie udało się policzyć zestawienia: {blad}
+      </p>
+    );
+  }
+  if (!zestawienie) return null;
+  if (zestawienie.wiersze.length === 0) {
+    return (
+      <p className="mt-4 text-sm text-muted-foreground">
+        W tym okresie nie ma wystawionych certyfikatów z potwierdzoną płatnością.
+      </p>
+    );
+  }
+  const s = zestawienie.sumy;
+
+  return (
+    <div className="mt-5 rounded-lg border">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <Wallet className="size-4 text-[var(--blekit)]" />
+          Zestawienie finansowe
+        </h3>
+        {link ? (
+          <Button variant="outline" size="sm" nativeButton={false} render={<a href={link} />}>
+            <FileSpreadsheet className="size-4" /> Pobierz xlsx
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-xs text-muted-foreground">
+              <th className="py-2 pl-4 pr-3 font-medium">Polisa</th>
+              <th className="py-2 pr-3 text-right font-medium">Osób</th>
+              <th className="py-2 pr-3 text-right font-medium">Składka</th>
+              <th className="py-2 pr-3 text-right font-medium">Prowizja</th>
+              <th className="py-2 pr-4 text-right font-medium">Do przekazania</th>
+            </tr>
+          </thead>
+          <tbody>
+            {zestawienie.wiersze.map((w) => (
+              <tr key={w.wariantId} className="border-b">
+                <td className="py-2 pl-4 pr-3">
+                  <div className="font-medium">{w.numerPolisy}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {w.skladkaJednostkowaZl} zł · {w.wierszyWPliku} wierszy
+                  </div>
+                </td>
+                <td className="py-2 pr-3 text-right tabular-nums">{w.osob}</td>
+                <td className="py-2 pr-3 text-right tabular-nums">{pln(w.skladkaLacznieZl)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums">{pln(w.prowizjaZl)}</td>
+                <td className="py-2 pr-4 text-right tabular-nums">{pln(w.doPrzekazaniaZl)}</td>
+              </tr>
+            ))}
+            <tr className="font-semibold">
+              <td className="py-2 pl-4 pr-3">RAZEM</td>
+              <td className="py-2 pr-3 text-right tabular-nums">{s.osob}</td>
+              <td className="py-2 pr-3 text-right tabular-nums">{pln(s.skladkaZl)}</td>
+              <td className="py-2 pr-3 text-right tabular-nums">{pln(s.prowizjaZl)}</td>
+              <td className="py-2 pr-4 text-right tabular-nums">{pln(s.doPrzekazaniaZl)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Rozbieżności nie zmieniają kwot wyżej — dla ubezpieczyciela polisa za
+          60 zł jest warta 60 zł. Ale biuro musi o nich wiedzieć, zanim zacznie
+          uzgadniać kwoty, bo to nasza strona ma je wyjaśnić. */}
+      {zestawienie.rozbieznosci.length > 0 ? (
+        <div className="flex items-start gap-2 border-t bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span>
+            <strong>
+              {zestawienie.rozbieznosci.length}{" "}
+              {zestawienie.rozbieznosci.length === 1 ? "wniosek" : "wniosków"}
+            </strong>{" "}
+            z inną wpłatą niż składka polisy:{" "}
+            {zestawienie.rozbieznosci
+              .map((r) => `${r.wariantId} — wg polisy ${pln(r.wgPolisyZl)}, wpłynęło ${pln(r.pobranoZl)}`)
+              .join("; ")}
+            . Kwoty w tabeli liczone są według polisy, bo tyle jest warta dla ubezpieczyciela —
+            różnicę trzeba wyjaśnić po naszej stronie.
+          </span>
+        </div>
       ) : null}
     </div>
   );
