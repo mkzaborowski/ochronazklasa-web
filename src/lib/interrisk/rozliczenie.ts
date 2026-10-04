@@ -64,8 +64,6 @@ export interface OsobaDoRozliczenia {
   dataUrodzenia: string;
   okresOd: string;
   okresDo: string;
-  /** suma ubezpieczenia wariantu — ta sama, którą drukuje certyfikat */
-  sumaUbezpieczenia: number;
 }
 
 /**
@@ -85,11 +83,8 @@ export const identyfikacjaOsoby = (o: OsobaDoRozliczenia): string =>
 export interface PodryzykoDoRozliczenia {
   kodTaryfowy: string;
   kluczStatystyczny: string;
-  /**
-   * Suma TEGO składnika, jeśli centrala ją podała. `null` = bierzemy sumę
-   * ubezpieczenia wariantu, czyli tę z certyfikatu.
-   */
-  sumaUbezpieczenia: number | null;
+  /** suma ubezpieczenia TEGO składnika — nie całego wariantu */
+  sumaUbezpieczenia: number;
   skladkaZl: number;
 }
 
@@ -137,10 +132,10 @@ export async function plikRozliczenia(
         identyfikacjaOsoby(o),
         o.okresOd,
         o.okresDo,
-        // Suma składnika, a gdy centrala jej nie podała — suma ubezpieczenia
-        // wariantu, ta sama, którą ubezpieczony ma wydrukowaną na certyfikacie.
-        pr.sumaUbezpieczenia ?? o.sumaUbezpieczenia,
-        pr.sumaUbezpieczenia ?? o.sumaUbezpieczenia,
+        // Suma TEGO podryzyka. Tylko dwa pierwsze składniki mają tu sumę
+        // z certyfikatu; pozostałe cztery własne, dużo niższe.
+        pr.sumaUbezpieczenia,
+        pr.sumaUbezpieczenia,
         1,
         pr.kodTaryfowy,
         pr.kluczStatystyczny,

@@ -12,7 +12,7 @@
  */
 import ExcelJS from "exceljs";
 import { plikRozliczenia, nazwaPlikuRozliczenia, NAGLOWKI } from "../src/lib/interrisk/rozliczenie.ts";
-import { problemyKonfiguracji, PODRYZYKA_WARIANTU, SKLADKI_WARIANTOW } from "../src/lib/interrisk/rozliczenie-kody.ts";
+import { problemyKonfiguracji, PODRYZYKA_WARIANTU, SKLADKI_WARIANTOW, UPRAWNIONY } from "../src/lib/interrisk/rozliczenie-kody.ts";
 
 /** Kolumna → czego wymaga szablon. `pusty` = w szablonie nic tam nie stoi. */
 const OCZEKIWANE: { naglowek: string; typ: "tekst" | "liczba" | "data" | "pusty"; format?: string }[] = [
@@ -55,7 +55,7 @@ const ZESTAW = {
   nazwaKorekty: "ZESTAW 01.09.2026",
   dataAneksu: new Date("2026-08-31T12:00:00"),
   dataPlatnosci: new Date("2026-10-10T12:00:00"),
-  uprawniony: "02/3008",
+  uprawniony: "33/073",
   prowizjaProcent: 40,
   podryzyka: PODRYZYKA,
 };
@@ -69,7 +69,6 @@ const WIERSZE = [
     dataUrodzenia: "",
     okresOd: "2026-09-13",
     okresDo: "2027-09-12",
-    sumaUbezpieczenia: 75000,
   },
 ];
 
@@ -119,7 +118,7 @@ console.log("\n[3] wiodące zera przeżywają zapis");
   const ws = await wczytaj(await plikRozliczenia(WIERSZE, ZESTAW));
   const r = ws.getRow(2);
   sprawdz("kod taryfowy zachowuje zero", r.getCell(12).value === "016818BK", String(r.getCell(12).value));
-  sprawdz("Uprawniony zachowuje zero", r.getCell(16).value === "02/3008", String(r.getCell(16).value));
+  sprawdz("Uprawniony zachowuje zero", r.getCell(16).value === "33/073", String(r.getCell(16).value));
 }
 
 console.log("\n[4] numer polisy bez spacji, jak w szablonie");
@@ -228,107 +227,129 @@ console.log("\n[8] konfiguracja wariantów — czy da się już rozliczać");
   // a to jedyny problem dotykający wprost pieniędzy.
   const zle = PODRYZYKA_WARIANTU.w135;
   PODRYZYKA_WARIANTU.w135 = [
-    { kodTaryfowy: "X", kluczStatystyczny: "Y", sumaUbezpieczenia: null, skladkaZl: 100 },
+    { kodTaryfowy: "X", kluczStatystyczny: "Y", sumaUbezpieczenia: 1000, skladkaZl: 100 },
   ];
   const p = problemyKonfiguracji(["w135"]);
-  sprawdz("rozjazd sumy jest wykrywany mimo braku sumy ubezpieczenia",
+  sprawdz("rozjazd sumy składek jest wykrywany",
     p.some((x) => x.powod.includes("100.00")), p.map((x) => x.powod).join("; ") || "nie wykryto");
   PODRYZYKA_WARIANTU.w135 = zle;
 }
 
-console.log("\n[9] kody i składki przepisane z pięciu arkuszy centrali");
+console.log("\n[9] kody, sumy i składki przepisane z pięciu arkuszy centrali");
 {
   // Przepisane niezależnie od tabeli w kodzie, wprost z arkuszy
-  // „<wariant> Plik do rozliczeń online.xlsx". Kolejność wierszy jak tam.
-  const Z_ARKUSZY: Record<string, [string, string, number][]> = {
+  // „<wariant> Plik do rozliczeń online.xlsx" (wersja poprawiona 4.10.2026).
+  // Kolejność wierszy jak tam; [kod, klucz, suma ubezpieczenia, składka].
+  const Z_ARKUSZY: Record<string, [string, string, number, number][]> = {
     w60: [
-      ["016818BK", "12201110100100070X", 43.1],
-      ["028018BK", "12200070X", 6.2],
-      ["02153018BK", "11070X", 2.7],
-      ["02156018BK", "10070X", 5.7],
-      ["184118BK", "070X", 1.1],
-      ["18080018BK", "00", 1.2],
+      ["016818BK", "12201110100100070X", 29000, 43.1],
+      ["028018BK", "12200070X", 29000, 6.2],
+      ["02153018BK", "11070X", 2700, 2.7],
+      ["02156018BK", "10070X", 12000, 5.7],
+      ["184118BK", "0070X", 5000, 1.1],
+      ["18080018BK", "000", 5000, 1.2],
     ],
     w90: [
-      ["016818BK", "12201110100100070X", 68.7],
+      ["016818BK", "12201110100100070X", 46000, 68.7],
       // W arkuszu 90 zł stoi „28018BK" — zgubione wiodące zero. Bierzemy
       // wersję z czterech pozostałych arkuszy, przy identycznym kluczu.
-      ["028018BK", "12200070X", 9.8],
-      ["02153018BK", "11070X", 3.0],
-      ["02156018BK", "10070X", 6.2],
-      ["184118BK", "070X", 1.1],
-      ["18080018BK", "00", 1.2],
+      ["028018BK", "12200070X", 46000, 9.8],
+      ["02153018BK", "11070X", 3000, 3.0],
+      ["02156018BK", "10070X", 13000, 6.2],
+      ["184118BK", "0070X", 5000, 1.1],
+      ["18080018BK", "000", 5000, 1.2],
     ],
     w135: [
-      ["016818BK", "12201110100100070X", 107.3],
-      ["028018BK", "12200070X", 16.0],
-      ["02153018BK", "11070X", 3.2],
-      ["02156018BK", "10070X", 6.2],
-      ["184118BK", "070X", 1.1],
-      ["18080018BK", "00", 1.2],
+      ["016818BK", "12201110100100070X", 75000, 107.3],
+      ["028018BK", "12200070X", 75000, 16.0],
+      ["02153018BK", "11070X", 3200, 3.2],
+      ["02156018BK", "10070X", 13000, 6.2],
+      ["184118BK", "0070X", 5000, 1.1],
+      ["18080018BK", "000", 5000, 1.2],
     ],
     w180: [
-      ["016818BK", "12201110100100070X", 145.9],
-      ["028018BK", "12200070X", 22.2],
-      ["02153018BK", "11070X", 3.4],
-      ["02156018BK", "10070X", 6.2],
-      ["184118BK", "070X", 1.1],
-      ["18080018BK", "00", 1.2],
+      ["016818BK", "12201110100100070X", 104000, 145.9],
+      ["028018BK", "12200070X", 104000, 22.2],
+      ["02153018BK", "11070X", 3400, 3.4],
+      ["02156018BK", "10070X", 13000, 6.2],
+      ["184118BK", "0070X", 5000, 1.1],
+      ["18080018BK", "000", 5000, 1.2],
     ],
     w250: [
-      ["016818BK", "12201110100100070X", 206.1],
-      ["028018BK", "12200070X", 31.9],
-      ["02153018BK", "11070X", 3.5],
-      ["02156018BK", "10070X", 6.2],
-      ["184118BK", "070X", 1.1],
-      ["18080018BK", "00", 1.2],
+      ["016818BK", "12201110100100070X", 150000, 206.1],
+      ["028018BK", "12200070X", 150000, 31.9],
+      ["02153018BK", "11070X", 3500, 3.5],
+      ["02156018BK", "10070X", 13000, 6.2],
+      ["184118BK", "0070X", 5000, 1.1],
+      ["18080018BK", "000", 5000, 1.2],
     ],
   };
 
   for (const [wariantId, oczekiwane] of Object.entries(Z_ARKUSZY)) {
     const nasze = PODRYZYKA_WARIANTU[wariantId] ?? [];
-    const zgodne = oczekiwane.every(([kod, klucz, skladka], i) =>
+    const zgodne = oczekiwane.every(([kod, klucz, su, skladka], i) =>
       nasze[i]?.kodTaryfowy === kod &&
       nasze[i]?.kluczStatystyczny === klucz &&
+      nasze[i]?.sumaUbezpieczenia === su &&
       Math.round((nasze[i]?.skladkaZl ?? 0) * 100) === Math.round(skladka * 100));
-    sprawdz(`${wariantId}: kody, klucze i składki jak w arkuszu`, zgodne,
-      zgodne ? "" : nasze.map((n) => `${n.kodTaryfowy}/${n.skladkaZl}`).join(" "));
+    sprawdz(`${wariantId}: kody, klucze, sumy i składki jak w arkuszu`, zgodne,
+      zgodne ? "" : nasze.map((n) => `${n.kodTaryfowy}/${n.sumaUbezpieczenia}/${n.skladkaZl}`).join(" "));
 
-    const suma = oczekiwane.reduce((a, [, , sk]) => a + sk, 0);
+    const suma = oczekiwane.reduce((a, [, , , sk]) => a + sk, 0);
     sprawdz(`${wariantId}: składki sumują się do ${SKLADKI_WARIANTOW[wariantId]} zł`,
       Math.round(suma * 100) === Math.round(SKLADKI_WARIANTOW[wariantId] * 100),
       `${suma.toFixed(2)} zł`);
   }
 
-  // Wiodące zera: kod zapisany kiedyś jako liczba wraca bez zera i przestaje
-  // być tym kodem. Dokładnie to zdarzyło się centrali w arkuszu 90 zł.
-  const zZerem = ["016818BK", "028018BK", "02153018BK", "02156018BK"];
+  // Wiodące zera: kod albo klucz zapisany kiedyś jako liczba wraca bez zera
+  // i przestaje być tym kodem. Centrala poprawiła tak dwa klucze między
+  // pierwszą a drugą wersją arkuszy („070X"→„0070X", „00"→„000"), więc to
+  // nie jest ryzyko teoretyczne.
+  const zWiodacymZerem = [
+    ["016818BK", "kod"], ["028018BK", "kod"], ["02153018BK", "kod"], ["02156018BK", "kod"],
+  ] as const;
   sprawdz("kody z wiodącym zerem mają je we wszystkich wariantach",
     Object.values(PODRYZYKA_WARIANTU).every((lista) =>
-      lista.filter((x) => zZerem.includes(x.kodTaryfowy)).length === zZerem.length));
+      zWiodacymZerem.every(([kod]) => lista.some((x) => x.kodTaryfowy === kod))));
+  sprawdz("klucze z wiodącym zerem też",
+    Object.values(PODRYZYKA_WARIANTU).every((lista) =>
+      lista.some((x) => x.kluczStatystyczny === "0070X") &&
+      lista.some((x) => x.kluczStatystyczny === "000")));
 
-  // Ten sam zestaw kodów w każdym wariancie — różnić się mają tylko składki.
+  // Ten sam zestaw kodów w każdym wariancie — różnić się mają sumy i składki.
   const zestaw = (w: string) =>
     (PODRYZYKA_WARIANTU[w] ?? []).map((x) => `${x.kodTaryfowy}|${x.kluczStatystyczny}`).join(",");
   const wzorzec = zestaw("w60");
   sprawdz("wszystkie warianty mają ten sam zestaw podryzyk",
     Object.keys(SKLADKI_WARIANTOW).every((w) => zestaw(w) === wzorzec));
+
+  sprawdz("numer pośrednika to 33/073, nie 02/3008 (inny oddział)", UPRAWNIONY === "33/073", UPRAWNIONY);
 }
 
-console.log("\n[10] brak sumy podryzyka bierze sumę ubezpieczenia wariantu");
+console.log("\n[10] suma ubezpieczenia należy do podryzyka, nie do wariantu");
 {
-  const bezSumy = PODRYZYKA.map((p) => ({ ...p, sumaUbezpieczenia: null }));
-  const ws = await wczytaj(await plikRozliczenia(WIERSZE, { ...ZESTAW, podryzyka: bezSumy }));
-  const r = ws.getRow(2);
-  // 75 000 zł to suma z certyfikatu wariantu 135 zł — ta, którą dostał klient.
-  sprawdz("Suma Ubezpieczenia z wariantu", r.getCell(9).value === 75000, String(r.getCell(9).value));
-  sprawdz("Suma Ubezpieczenia max z wariantu", r.getCell(10).value === 75000, String(r.getCell(10).value));
-  sprawdz("nadal liczba, nie tekst", typKomorki(r.getCell(9).value) === "liczba");
+  const ws = await wczytaj(await plikRozliczenia(WIERSZE, ZESTAW));
+  // Wariant 135 zł ma na certyfikacie 75 000 zł, ale tylko dwa pierwsze
+  // składniki tyle niosą. Gdyby wszystkie wiersze dostały sumę wariantu —
+  // jak robiliśmy, zanim centrala podała rozbicie — cztery z sześciu byłyby
+  // zawyżone o rząd wielkości i nikt by tego nie zobaczył w arkuszu.
+  const sumy = Array.from({ length: PODRYZYKA.length }, (_, i) => ws.getRow(2 + i).getCell(9).value);
+  sprawdz("każdy wiersz ma własną sumę", sumy.every((x) => typeof x === "number" && x > 0),
+    sumy.join(", "));
+  sprawdz("nie wszystkie są równe sumie wariantu", new Set(sumy).size > 1, sumy.join(", "));
+  sprawdz("kolumna max = kolumna suma",
+    Array.from({ length: PODRYZYKA.length }, (_, i) =>
+      ws.getRow(2 + i).getCell(9).value === ws.getRow(2 + i).getCell(10).value).every(Boolean));
 
-  // Gdy centrala poda sumę podryzyka, ma ona pierwszeństwo nad sumą wariantu.
-  const zSuma = await wczytaj(await plikRozliczenia(WIERSZE, ZESTAW));
-  sprawdz("suma podryzyka ma pierwszeństwo", zSuma.getRow(2).getCell(9).value === 20000,
-    String(zSuma.getRow(2).getCell(9).value));
+  // Zerowa suma to ryzyko „na 0 zł" — przechodzi import i wychodzi przy szkodzie.
+  const zle = PODRYZYKA_WARIANTU.w135;
+  PODRYZYKA_WARIANTU.w135 = [
+    { kodTaryfowy: "X", kluczStatystyczny: "Y", sumaUbezpieczenia: 0, skladkaZl: 135 },
+  ];
+  const p = problemyKonfiguracji(["w135"]);
+  sprawdz("zerowa suma ubezpieczenia jest wykrywana",
+    p.some((x) => x.powod.includes("suma ubezpieczenia")), p.map((x) => x.powod).join("; ") || "nie wykryto");
+  PODRYZYKA_WARIANTU.w135 = zle;
 }
 
 console.log(bledy === 0 ? "\nPlik zgodny z szablonem." : `\n${bledy} niezgodności.`);

@@ -67,16 +67,13 @@ export function RozliczenieInterrisk({
         Wystawione certyfikaty z potwierdzoną płatnością, w układzie pliku do zaczytania.
         Jeden plik na polisę grupową — bo tak wygląda szablon z centrali.
       </p>
-      {/* Skąd biorą się sumy: centrala przysłała kody, klucze i składki, ale
-          kolumnę „Suma Ubezpieczenia" zostawiła pustą. Wpisujemy tam sumę
-          wariantu — tę samą, którą ubezpieczony ma na certyfikacie. Piszemy to
-          wprost, bo to jedyna liczba w pliku, która nie pochodzi wprost od
-          centrali, a biuro podpisuje się pod całym plikiem. */}
+      {/* Sumy ubezpieczenia są teraz właściwością podryzyka, nie wariantu —
+          i to jest nieoczywiste na tyle, że biuro powinno o tym wiedzieć,
+          zanim zdziwi się, widząc 2 700 zł przy polisie na 29 000 zł. */}
       <p className="mt-2 text-xs text-muted-foreground">
-        Sumy ubezpieczenia w pliku to sumy z certyfikatów (29 000 zł przy składce 60 zł,
-        150 000 zł przy 250 zł). Centrala podała kody taryfowe, klucze i składki, a kolumnę
-        z sumą zostawiła pustą — jeśli kiedyś przyśle rozbicie sum na poszczególne podryzyka,
-        wpisujemy je i wchodzą w to miejsce.
+        Kody taryfowe, klucze statystyczne, sumy ubezpieczenia i składki pochodzą z arkuszy
+        centrali. Suma ubezpieczenia należy do podryzyka, nie do wariantu: tylko dwa pierwsze
+        składniki mają sumę z certyfikatu, pozostałe cztery mają własne, niższe.
       </p>
       {/* Kolumna PESEL jest w szablonie pusta, my wypełniamy ją zawsze — to
           decyzja biura, więc niech biuro o niej wie, a nie odkrywa jej,
