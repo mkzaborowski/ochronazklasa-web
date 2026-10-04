@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, FileSpreadsheet } from "lucide-react";
+import { AlertTriangle, FileArchive, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,16 +38,28 @@ export function RozliczenieInterrisk({
   problemy: { wariantId: string; powod: string }[];
 }) {
   const dzis = new Date().toISOString().slice(0, 10);
+  // Domyślnie poprzedni pełny miesiąc: rozliczenie jest z natury wsteczne,
+  // a bieżący miesiąc jeszcze się sprzedaje.
+  const teraz = new Date();
+  const poprzedniOd = new Date(Date.UTC(teraz.getUTCFullYear(), teraz.getUTCMonth() - 1, 1))
+    .toISOString().slice(0, 10);
+  const poprzedniDo = new Date(Date.UTC(teraz.getUTCFullYear(), teraz.getUTCMonth(), 0))
+    .toISOString().slice(0, 10);
+
   const [zestaw, setZestaw] = useState("");
-  const [aneks, setAneks] = useState(dzis);
+  const [aneks, setAneks] = useState(poprzedniDo);
   const [platnosc, setPlatnosc] = useState(dzis);
+  const [od, setOd] = useState(poprzedniOd);
+  const [do_, setDo] = useState(poprzedniDo);
 
-  const gotowe = zestaw.trim() !== "" && aneks !== "" && platnosc !== "";
+  const gotowe = zestaw.trim() !== "" && aneks !== "" && platnosc !== "" && od !== "" && do_ !== "" && od <= do_;
 
+  const parametry =
+    `zestaw=${encodeURIComponent(zestaw.trim())}` +
+    `&aneks=${aneks}&platnosc=${platnosc}&od=${od}&do=${do_}`;
   const link = (wariantId: string) =>
-    `/api/rozliczenie?wariant=${encodeURIComponent(wariantId)}` +
-    `&zestaw=${encodeURIComponent(zestaw.trim())}` +
-    `&aneks=${aneks}&platnosc=${platnosc}`;
+    `/api/rozliczenie?wariant=${encodeURIComponent(wariantId)}&${parametry}`;
+  const linkPaczki = `/api/rozliczenie/zip?${parametry}`;
 
   if (warianty.length === 0) {
     return (
@@ -104,7 +116,25 @@ export function RozliczenieInterrisk({
         </div>
       ) : null}
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      {/* Okres jest obowiązkowy: bez niego plik brał całą historię sprzedaży
+          od początku, co przy rozliczeniu co miesiąc znaczyłoby zgłaszanie
+          centrali tego samego po raz kolejny. */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-1.5">
+          <Label htmlFor="od" className="text-xs text-muted-foreground">
+            Sprzedaż od
+          </Label>
+          <Input id="od" type="date" value={od} onChange={(e) => setOd(e.target.value)} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="do" className="text-xs text-muted-foreground">
+            Sprzedaż do
+          </Label>
+          <Input id="do" type="date" value={do_} onChange={(e) => setDo(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <div className="grid gap-1.5">
           <Label htmlFor="zestaw" className="text-xs text-muted-foreground">
             Nazwa zestawu
@@ -133,6 +163,19 @@ export function RozliczenieInterrisk({
             onChange={(e) => setPlatnosc(e.target.value)}
           />
         </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 p-3">
+        <Button
+          nativeButton={false}
+          disabled={!gotowe}
+          render={<a href={gotowe ? linkPaczki : undefined} />}
+        >
+          <FileArchive className="size-4" /> Pobierz wszystkie w zip
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          Po jednym pliku na wariant ze sprzedażą w tym okresie — zamiast pobierania po kolei.
+        </span>
       </div>
 
       <ul className="mt-4 divide-y border-t">
@@ -166,7 +209,7 @@ export function RozliczenieInterrisk({
 
       {!gotowe ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          Uzupełnij nazwę zestawu i obie daty — wchodzą do każdego wiersza pliku.
+          Uzupełnij nazwę zestawu, okres i obie daty — wchodzą do każdego wiersza pliku.
         </p>
       ) : null}
     </div>

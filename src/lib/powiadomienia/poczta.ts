@@ -17,11 +17,19 @@ export const pocztaSkonfigurowana = (): boolean => Boolean(KLUCZ);
  * `kluczIdempotencji` chroni przed drugą wysyłką tego samego powiadomienia,
  * gdyby zadanie uruchomiło się dwa razy albo przerwało w połowie.
  */
+export interface Zalacznik {
+  nazwa: string;
+  /** typ MIME, np. „application/zip" */
+  typ: string;
+  dane: Buffer;
+}
+
 export async function wyslijList(opcje: {
   do: string;
   temat: string;
   tresc: string;
   trescHtml?: string;
+  zalaczniki?: Zalacznik[];
   kluczIdempotencji?: string;
 }): Promise<void> {
   if (!KLUCZ) throw new Error("POCZTA_KLUCZ nieustawiony — nie ma czym wysłać");
@@ -35,7 +43,12 @@ export async function wyslijList(opcje: {
       tresc: opcje.tresc,
       tresc_html: opcje.trescHtml,
       klucz: opcje.kluczIdempotencji,
-      zalaczniki: [],
+      // Kształt jak w ozk-api: usługa pocztowa oczekuje base64 w `dane_b64`.
+      zalaczniki: (opcje.zalaczniki ?? []).map((z) => ({
+        nazwa: z.nazwa,
+        typ: z.typ,
+        dane_b64: z.dane.toString("base64"),
+      })),
     }),
     signal: AbortSignal.timeout(30_000),
   });

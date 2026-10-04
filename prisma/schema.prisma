@@ -442,3 +442,31 @@ model Aneks {
   @@index([numerPolisy])
   @@index([createdAt])
 }
+
+// Automatyczna wysyłka paczki rozliczeniowej do centrali InterRisk.
+//
+// JEDEN WIERSZ NA CAŁY PANEL (id = "domyslne"). To są ustawienia biura, nie
+// użytkownika - kto inny je zmieni, ten sam harmonogram obowiązuje wszystkich.
+// Wiersza nie trzeba zakładać: brak oznacza „wyłączone", a zapis go tworzy.
+//
+// `ostatniOkres` trzyma OKRES ("2026-09"), a nie znacznik czasu. Cron chodzi
+// co dziesięć minut i bywa powtarzany po restarcie; porównanie okresów znaczy,
+// że paczka za wrzesień wyjdzie dokładnie raz, choćby zadanie odpaliło sto
+// razy tego samego dnia.
+model WysylkaRozliczenia {
+  id           String   @id @default("domyslne")
+  wlaczona     Boolean  @default(false)
+  // Adresy centrali; pusta lista = nie ma do kogo wysłać, więc nie wysyłamy.
+  odbiorcy     String[] @default([])
+  // Dzień miesiąca, w którym wychodzi paczka za miesiąc poprzedni. 1-28,
+  // bo 29-31 nie istnieje w każdym miesiącu i wysyłka cicho by przepadała.
+  dzienWysylki Int      @default(5)
+  // Ile pełnych miesięcy wstecz obejmuje paczka. 1 = poprzedni miesiąc.
+  miesiecyWstecz Int    @default(1)
+  // Ile dni od wysyłki do terminu płatności - wchodzi w kolumnę „data płatności".
+  dniDoPlatnosci Int    @default(14)
+  ostatniOkres String?
+  ostatniBlad  String?
+  ostatniaProba DateTime?
+  updatedAt    DateTime @updatedAt
+}

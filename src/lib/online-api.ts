@@ -3,6 +3,7 @@
  * Wywołania idą z serwera Next.js po wewnętrznej sieci dockerowej `edge`,
  * więc token nigdy nie trafia do przeglądarki.
  */
+import { dzienWarszawski } from "@/lib/statystyki/dzienne";
 const BAZA = process.env.OZK_API_URL ?? "http://ozk-api:4000";
 const TOKEN = process.env.OZK_API_TOKEN ?? "";
 
@@ -171,6 +172,22 @@ export interface WierszRozliczeniaApi {
   kwotaWnioskuZl: number;
   kodAgenta: string | null;
 }
+
+/**
+ * Dzień SPRZEDAŻY wiersza rozliczenia, w czasie warszawskim.
+ *
+ * SQLite zapisuje `datetime('now')` w UTC, bez strefy: „2026-09-30 22:30:00".
+ * `new Date()` na takim napisie zgaduje strefę po swojemu, więc dopisujemy ją
+ * wprost. Bez tego zakup o 0:30 w nocy 1 października wpadłby do września.
+ *
+ * Liczy się `utworzono`, nie data wystawienia certyfikatu: ta druga nadpisuje
+ * się przy każdym ponownym wystawieniu — także po korekcie danych — więc
+ * sprzedaż z września poprawiona w październiku przeskoczyłaby do innego
+ * okresu. Prowizje i rozliczenie z InterRisk wołają tę samą funkcję, żeby nie
+ * dało się ich rozjechać.
+ */
+export const dzienSprzedazy = (w: Pick<WierszRozliczeniaApi, "utworzono">): string =>
+  dzienWarszawski(new Date(`${w.utworzono.replace(" ", "T")}Z`));
 
 /** Wystawione certyfikaty z potwierdzoną płatnością — wsad do rozliczenia. */
 export const pobierzRozliczenie = () =>

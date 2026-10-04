@@ -7,6 +7,8 @@ import { PODRYZYKA_WARIANTU, problemyKonfiguracji } from "@/lib/interrisk/rozlic
 import { RozliczenieProwizji } from "@/components/rozliczenie-prowizji";
 import { domyslnyOkres, raportProwizji, type RaportProwizji } from "@/lib/prowizje/raport";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { WysylkaRozliczenia } from "@/components/wysylka-rozliczenia";
+import { ustawieniaWysylki, type UstawieniaWysylki } from "@/lib/interrisk/wysylka";
 
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -49,6 +51,11 @@ export default async function RozliczeniaPage({
       }
     }
   }
+
+  // Harmonogram wysyła listy do ubezpieczyciela, więc widzi go i zmienia
+  // tylko administrator — tak samo jak prowizje.
+  let wysylka: UstawieniaWysylki | null = null;
+  if (widziProwizje) wysylka = await ustawieniaWysylki();
 
   let warianty: WariantDoRozliczenia[] = [];
   let blad: string | null = null;
@@ -112,6 +119,8 @@ export default async function RozliczeniaPage({
           problemy={problemyKonfiguracji(warianty.map((w) => w.wariantId))}
         />
       )}
+
+      {wysylka ? <WysylkaRozliczenia ustawienia={wysylka} /> : null}
     </div>
   );
 }

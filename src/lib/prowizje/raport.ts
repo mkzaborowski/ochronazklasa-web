@@ -1,4 +1,4 @@
-import { pobierzRozliczenie } from "@/lib/online-api";
+import { dzienSprzedazy, pobierzRozliczenie } from "@/lib/online-api";
 import { dopasujAgentow } from "@/lib/agents/atrybucja";
 import { normalizujKod } from "@/lib/agents/kod";
 import { dzienWarszawski } from "@/lib/statystyki/dzienne";
@@ -43,13 +43,6 @@ export interface RaportProwizji {
   sprzedaze: SprzedazWRaporcie[];
 }
 
-/**
- * SQLite zapisuje `datetime('now')` w UTC, bez strefy: „2026-09-30 22:30:00".
- * `new Date()` na takim napisie zgaduje strefę po swojemu, więc dopisujemy ją
- * wprost. Bez tego zakup o 0:30 w nocy 1 października wpadłby do września.
- */
-const zSqlite = (t: string) => new Date(`${t.replace(" ", "T")}Z`);
-
 /** Pierwszy dzień bieżącego miesiąca i dzisiaj — w czasie warszawskim. */
 export function domyslnyOkres(): { od: string; do: string } {
   const dzis = dzienWarszawski(new Date());
@@ -70,7 +63,7 @@ export async function raportProwizji(od: string, do_: string): Promise<RaportPro
     }
   >();
   for (const w of wiersze) {
-    const dzien = dzienWarszawski(zSqlite(w.utworzono));
+    const dzien = dzienSprzedazy(w);
     if (dzien < od || dzien > do_) continue;
     // Kwota pobrana dotyczy CAŁEGO wniosku i powtarza się w każdym jego
     // wierszu — bierzemy ją raz, nie sumujemy po osobach.
