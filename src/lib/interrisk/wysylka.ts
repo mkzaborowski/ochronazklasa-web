@@ -102,9 +102,8 @@ export async function wyslijRozliczenie(opcje: { naSile?: boolean; dzis?: string
     // najpierw czyta maila, a dopiero potem otwiera arkusz — jeśli w ogóle.
     const podsumowanie = [
       "",
-      `Składka łącznie:  ${pln(z.sumy.skladkaZl)}`,
-      `Prowizja (${PROWIZJA}%):   ${pln(z.sumy.prowizjaZl)}`,
-      `Do przekazania:   ${pln(z.sumy.doPrzekazaniaZl)}`,
+      `Składka łącznie, do przelewu:        ${pln(z.sumy.skladkaZl)}`,
+      `Prowizja ${PROWIZJA}% do zwrotu dla nas:      ${pln(z.sumy.prowizjaZl)}`,
     ];
     const uwagi = z.rozbieznosci.length
       ? ["", `UWAGA: ${z.rozbieznosci.length} wniosków z inną wpłatą niż składka polisy — wyjaśniamy po naszej stronie.`]

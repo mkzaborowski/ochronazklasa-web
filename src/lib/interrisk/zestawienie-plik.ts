@@ -49,11 +49,17 @@ export async function plikZestawienia(
     `Pośrednik: ${UPRAWNIONY} · prowizja ${PROWIZJA_PROCENT}% · ` +
       `płatność do ${zestaw.dataPlatnosci.toISOString().slice(0, 10)}`,
   );
+  // Kierunek pieniędzy napisany wprost, bo z samych kolumn nie wynika i łatwo
+  // przeczytać je odwrotnie: przelewamy całość, prowizja wraca osobno.
+  naglowek(
+    "Przelewamy pełną składkę; prowizja wraca osobnym przelewem od InterRisk.",
+  );
   ws.addRow([]);
 
   const kolumny = ws.addRow([
     "Numer polisy", "Wariant", "Ubezpieczonych", "Wierszy w pliku",
-    "Składka łącznie", `Prowizja ${PROWIZJA_PROCENT}%`, "Do przekazania",
+    "Składka — do przelewu", `Prowizja ${PROWIZJA_PROCENT}% — do zwrotu`,
+    "Zostaje w InterRisk",
   ]);
   kolumny.font = { ...CZCIONKA, bold: true };
   const pierwszy = kolumny.number + 1;
@@ -66,7 +72,7 @@ export async function plikZestawienia(
       w.wierszyWPliku,
       w.skladkaLacznieZl,
       w.prowizjaZl,
-      w.doPrzekazaniaZl,
+      w.zostajeWInterriskZl,
     ]);
     for (const k of [5, 6, 7]) r.getCell(k).numFmt = ZL;
   }
@@ -79,11 +85,23 @@ export async function plikZestawienia(
     ["D", z.sumy.wierszyWPliku],
     ["E", z.sumy.skladkaZl],
     ["F", z.sumy.prowizjaZl],
-    ["G", z.sumy.doPrzekazaniaZl],
+    ["G", z.sumy.zostajeWInterriskZl],
   ] as const) {
     suma.getCell(kol).value = { formula: `SUM(${kol}${pierwszy}:${kol}${ostatni})`, result: wynik };
   }
   for (const k of [5, 6, 7]) suma.getCell(k).numFmt = ZL;
+
+  // Dwie kwoty, po które sięga się najpierw: ile wysłać i ile ma wrócić.
+  // W tabeli są, ale rozsypane po kolumnach — tu stoją jako zdania.
+  ws.addRow([]);
+  for (const [etykieta, kwota] of [
+    ["DO PRZELEWU NA KONTO INTERRISK (pełna składka)", z.sumy.skladkaZl],
+    [`PROWIZJA DO ZWROTU PRZEZ INTERRISK (${PROWIZJA_PROCENT}%)`, z.sumy.prowizjaZl],
+  ] as const) {
+    const r = ws.addRow([etykieta, "", "", "", "", "", kwota]);
+    r.font = { ...CZCIONKA, bold: true, color: { argb: GRANAT } };
+    r.getCell(7).numFmt = ZL;
+  }
 
   // Rozbieżności NIE wchodzą do kwot wyżej — to osobna informacja dla człowieka,
   // a nie korekta rozliczenia. Milczenie o nich byłoby gorsze: kwota w arkuszu
@@ -92,7 +110,7 @@ export async function plikZestawienia(
     ws.addRow([]);
     const t = ws.addRow([
       `UWAGA: ${z.rozbieznosci.length} ${z.rozbieznosci.length === 1 ? "wniosek" : "wniosków"}` +
-        " z inną kwotą wpłaty niż składka polisy (do wyjaśnienia po naszej stronie)",
+        " z inną kwotą wpłaty niż składka polisy — do przelewu liczy się wartość polisy",
     ]);
     t.font = { ...CZCIONKA, bold: true, color: { argb: "FFB45309" } };
     const n = ws.addRow(["Wniosek", "Wariant", "Wg polisy", "Wpłynęło", "", "", ""]);

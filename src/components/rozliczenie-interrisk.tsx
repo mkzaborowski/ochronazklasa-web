@@ -308,8 +308,7 @@ function ZestawienieFinansowe({
               <th className="py-2 pl-4 pr-3 font-medium">Polisa</th>
               <th className="py-2 pr-3 text-right font-medium">Osób</th>
               <th className="py-2 pr-3 text-right font-medium">Składka</th>
-              <th className="py-2 pr-3 text-right font-medium">Prowizja</th>
-              <th className="py-2 pr-4 text-right font-medium">Do przekazania</th>
+              <th className="py-2 pr-4 text-right font-medium">Prowizja 40%</th>
             </tr>
           </thead>
           <tbody>
@@ -323,20 +322,34 @@ function ZestawienieFinansowe({
                 </td>
                 <td className="py-2 pr-3 text-right tabular-nums">{w.osob}</td>
                 <td className="py-2 pr-3 text-right tabular-nums">{pln(w.skladkaLacznieZl)}</td>
-                <td className="py-2 pr-3 text-right tabular-nums">{pln(w.prowizjaZl)}</td>
-                <td className="py-2 pr-4 text-right tabular-nums">{pln(w.doPrzekazaniaZl)}</td>
+                <td className="py-2 pr-4 text-right tabular-nums">{pln(w.prowizjaZl)}</td>
               </tr>
             ))}
             <tr className="font-semibold">
               <td className="py-2 pl-4 pr-3">RAZEM</td>
               <td className="py-2 pr-3 text-right tabular-nums">{s.osob}</td>
               <td className="py-2 pr-3 text-right tabular-nums">{pln(s.skladkaZl)}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{pln(s.prowizjaZl)}</td>
-              <td className="py-2 pr-4 text-right tabular-nums">{pln(s.doPrzekazaniaZl)}</td>
+              <td className="py-2 pr-4 text-right tabular-nums">{pln(s.prowizjaZl)}</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      {/* Kierunek pieniędzy napisany wprost: z kolumn nie wynika, a pomyłka
+          znaczy przelew niższy o 40%, czyli niedopłatę do ubezpieczyciela. */}
+      <dl className="grid gap-1 border-t px-4 py-3 text-sm">
+        <div className="flex flex-wrap justify-between gap-2">
+          <dt className="text-muted-foreground">Do przelewu na konto InterRisk</dt>
+          <dd className="font-semibold tabular-nums">{pln(s.skladkaZl)}</dd>
+        </div>
+        <div className="flex flex-wrap justify-between gap-2">
+          <dt className="text-muted-foreground">Prowizja do zwrotu przez InterRisk</dt>
+          <dd className="font-semibold tabular-nums">{pln(s.prowizjaZl)}</dd>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Przelewamy pełną składkę — prowizji nie potrącamy. Wraca osobnym przelewem.
+        </p>
+      </dl>
 
       {/* Rozbieżności nie zmieniają kwot wyżej — dla ubezpieczyciela polisa za
           60 zł jest warta 60 zł. Ale biuro musi o nich wiedzieć, zanim zacznie
@@ -353,8 +366,8 @@ function ZestawienieFinansowe({
             {zestawienie.rozbieznosci
               .map((r) => `${r.wariantId} — wg polisy ${pln(r.wgPolisyZl)}, wpłynęło ${pln(r.pobranoZl)}`)
               .join("; ")}
-            . Kwoty w tabeli liczone są według polisy, bo tyle jest warta dla ubezpieczyciela —
-            różnicę trzeba wyjaśnić po naszej stronie.
+            . Do przelewu liczy się wartość polisy, więc tę różnicę dopłacamy z własnych
+            pieniędzy — warto wyjaśnić ją przed przelewem, a nie po nim.
           </span>
         </div>
       ) : null}

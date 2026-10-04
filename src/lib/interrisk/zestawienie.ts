@@ -3,8 +3,13 @@
  * Zestawienie finansowe do uzgodnienia z centralą.
  *
  * Idzie razem z plikami certyfikatów i odpowiada na inne pytanie niż one:
- * tamte mówią KTO jest ubezpieczony, to mówi ZA ILE i ile z tego nam się
- * należy. Centrala porównuje te kwoty ze swoimi przed przelewem prowizji.
+ * tamte mówią KTO jest ubezpieczony, to mówi ZA ILE.
+ *
+ * KIERUNEK PIENIĘDZY: przelewamy do InterRisk CAŁĄ zebraną składkę, a dopiero
+ * potem centrala zwraca nam 40% prowizji osobnym przelewem. Nie potrącamy
+ * prowizji z przelewu. Dlatego „do przelewu" to pełna składka, a prowizja jest
+ * osobną kwotą DO OTRZYMANIA — pomylenie tych dwóch znaczyłoby przelew niższy
+ * o 40%, czyli niedopłatę do ubezpieczyciela przy każdym rozliczeniu.
  *
  * LICZONE Z TYCH SAMYCH WIERSZY, co pliki w paczce — dostaje je jako argument,
  * a nie pobiera własnym zapytaniem. Dwa niezależne odczyty tych samych danych
@@ -14,8 +19,9 @@
  * SKŁADKA LICZONA WEDŁUG POLISY, nie według wpłaty. Dla ubezpieczyciela polisa
  * za 60 zł jest warta 60 zł niezależnie od tego, ile wpłynęło na nasze konto —
  * i tyle stoi w pliku osobowym, w rozbiciu na podryzyka. Gdyby wpłynęło mniej,
- * nie zmieniamy tu kwoty po cichu, tylko zgłaszamy to osobno (`rozbieznosci`),
- * bo to jest nasz problem do wyjaśnienia, a nie korekta rozliczenia.
+ * nie zmieniamy tu kwoty po cichu, tylko zgłaszamy to osobno (`rozbieznosci`).
+ * Skoro przelewamy wartość polisy, każda niedopłata to realny ubytek gotówki
+ * po naszej stronie, a nie sama niezgodność w papierach.
  * Uwaga: rozliczenie prowizji dla agentów liczy ODWROTNIE — od pieniędzy,
  * które naprawdę wpłynęły. Obie reguły są celowe i nie wolno ich zrównać.
  *
@@ -46,9 +52,12 @@ export interface WierszZestawienia {
   skladkaJednostkowaZl: number;
   osob: number;
   wierszyWPliku: number;
+  /** pełna składka — tyle przelewamy do InterRisk */
   skladkaLacznieZl: number;
+  /** 40% — tyle InterRisk zwraca nam osobnym przelewem */
   prowizjaZl: number;
-  doPrzekazaniaZl: number;
+  /** 60% — tyle zostaje po stronie ubezpieczyciela */
+  zostajeWInterriskZl: number;
 }
 
 export interface Rozbieznosc {
@@ -64,9 +73,11 @@ export interface Zestawienie {
   sumy: {
     osob: number;
     wierszyWPliku: number;
+    /** pełna składka do przelania na konto InterRisk */
     skladkaZl: number;
+    /** prowizja do otrzymania zwrotem */
     prowizjaZl: number;
-    doPrzekazaniaZl: number;
+    zostajeWInterriskZl: number;
   };
   /** wnioski, gdzie pobrano inną kwotę, niż wynika z polisy */
   rozbieznosci: Rozbieznosc[];
@@ -103,7 +114,7 @@ export function zestawienieFinansowe(
       wierszyWPliku: dla.length * (konfiguracja.podryzykNaOsobe[wariantId] ?? 0),
       skladkaLacznieZl: zl(skladkaGr),
       prowizjaZl: zl(prowizjaGr),
-      doPrzekazaniaZl: zl(skladkaGr - prowizjaGr),
+      zostajeWInterriskZl: zl(skladkaGr - prowizjaGr),
     });
 
     // Kwota pobrana dotyczy CAŁEGO wniosku i powtarza się w każdym jego
@@ -132,9 +143,9 @@ export function zestawienieFinansowe(
       wierszyWPliku: s.wierszyWPliku + w.wierszyWPliku,
       skladkaZl: s.skladkaZl + w.skladkaLacznieZl,
       prowizjaZl: s.prowizjaZl + w.prowizjaZl,
-      doPrzekazaniaZl: s.doPrzekazaniaZl + w.doPrzekazaniaZl,
+      zostajeWInterriskZl: s.zostajeWInterriskZl + w.zostajeWInterriskZl,
     }),
-    { osob: 0, wierszyWPliku: 0, skladkaZl: 0, prowizjaZl: 0, doPrzekazaniaZl: 0 },
+    { osob: 0, wierszyWPliku: 0, skladkaZl: 0, prowizjaZl: 0, zostajeWInterriskZl: 0 },
   );
 
   return { okres, wiersze, sumy, rozbieznosci };

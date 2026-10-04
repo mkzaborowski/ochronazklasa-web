@@ -41,9 +41,12 @@ console.log("\n[1] jedna polisa, trzy osoby");
   sprawdz("3 osoby", r.osob === 3, String(r.osob));
   sprawdz("składka 405 zł", r.skladkaLacznieZl === 405, String(r.skladkaLacznieZl));
   sprawdz("prowizja 40% = 162 zł", r.prowizjaZl === 162, String(r.prowizjaZl));
-  sprawdz("do przekazania 243 zł", r.doPrzekazaniaZl === 243, String(r.doPrzekazaniaZl));
-  sprawdz("składka = prowizja + do przekazania",
-    r.prowizjaZl + r.doPrzekazaniaZl === r.skladkaLacznieZl);
+  // Przelewamy CAŁOŚĆ, nie 60% — prowizja wraca osobno. Gdyby ktoś kiedyś
+  // „uprościł" to na składka − prowizja, każdy przelew byłby o 40% za niski.
+  sprawdz("do przelewu idzie pełna składka, nie 60%", r.skladkaLacznieZl === 405,
+    String(r.skladkaLacznieZl));
+  sprawdz("zostaje w InterRisk 243 zł", r.zostajeWInterriskZl === 243, String(r.zostajeWInterriskZl));
+  sprawdz("składka = prowizja + reszta", r.prowizjaZl + r.zostajeWInterriskZl === r.skladkaLacznieZl);
   sprawdz("6 podryzyk na osobę → 18 wierszy", r.wierszyWPliku === 18, String(r.wierszyWPliku));
   sprawdz("bez rozbieżności", z.rozbieznosci.length === 0);
 }
@@ -59,7 +62,7 @@ console.log("\n[2] sumy po wielu wariantach");
   sprawdz("składka 560 zł", z.sumy.skladkaZl === 560, String(z.sumy.skladkaZl));
   sprawdz("prowizja 224 zł", z.sumy.prowizjaZl === 224, String(z.sumy.prowizjaZl));
   sprawdz("suma = prowizja + reszta",
-    z.sumy.prowizjaZl + z.sumy.doPrzekazaniaZl === z.sumy.skladkaZl);
+    z.sumy.prowizjaZl + z.sumy.zostajeWInterriskZl === z.sumy.skladkaZl);
   // Kolejność po składce, żeby arkusz za każdym razem wyglądał tak samo.
   sprawdz("warianty rosnąco po składce",
     z.wiersze.map((x) => x.wariantId).join(",") === "w60,w250",
@@ -74,9 +77,9 @@ console.log("\n[3] grosz nie ginie przy nieokrągłej prowizji");
     const mapa = new Map([["w1", Array.from({ length: osob }, (_, i) => w("w1", skladka, `x${i}`, skladka))]]);
     const z = zestawienieFinansowe(mapa, OKRES, KONF);
     const r = z.wiersze[0];
-    const domyka = Math.round((r.prowizjaZl + r.doPrzekazaniaZl) * 100) === Math.round(r.skladkaLacznieZl * 100);
+    const domyka = Math.round((r.prowizjaZl + r.zostajeWInterriskZl) * 100) === Math.round(r.skladkaLacznieZl * 100);
     sprawdz(`${osob} × ${skladka} zł domyka się`, domyka,
-      `${r.skladkaLacznieZl} = ${r.prowizjaZl} + ${r.doPrzekazaniaZl}`);
+      `${r.skladkaLacznieZl} = ${r.prowizjaZl} + ${r.zostajeWInterriskZl}`);
   }
 }
 
@@ -107,7 +110,19 @@ console.log("\n[5] wielodzietny wniosek nie jest rozbieżnością");
   sprawdz("składka 270 zł", z.sumy.skladkaZl === 270, String(z.sumy.skladkaZl));
 }
 
-console.log("\n[6] pusty okres");
+console.log("\n[6] kierunek pieniędzy: przelewamy całość, prowizja wraca");
+{
+  const mapa = new Map([["w135", [w("w135", 135, "a", 135)]]]);
+  const z = zestawienieFinansowe(mapa, OKRES, KONF);
+  // Te dwie kwoty trafiają wprost na przelew i na fakturę prowizyjną.
+  sprawdz("do przelewu = 100% składki", z.sumy.skladkaZl === 135, String(z.sumy.skladkaZl));
+  sprawdz("prowizja do zwrotu = 40%", z.sumy.prowizjaZl === 54, String(z.sumy.prowizjaZl));
+  sprawdz("do przelewu NIE jest pomniejszone o prowizję",
+    z.sumy.skladkaZl !== z.sumy.skladkaZl - z.sumy.prowizjaZl && z.sumy.skladkaZl > z.sumy.prowizjaZl);
+  sprawdz("reszta to 60%", z.sumy.zostajeWInterriskZl === 81, String(z.sumy.zostajeWInterriskZl));
+}
+
+console.log("\n[7] pusty okres");
 {
   const z = zestawienieFinansowe(new Map(), OKRES, KONF);
   sprawdz("zero wierszy", z.wiersze.length === 0);
